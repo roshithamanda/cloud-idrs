@@ -2,3 +2,16 @@ venv/
 __pycache__/
 *.pyc
 .env
+
+# Dataset files (too large for GitHub)
+data/raw/*.txt
+data/raw/*.csv
+data/raw/*.pcap
+data/processed/*.npy
+*.pkl
+*.h5
+*.joblib
+
+# AWS credentials
+.aws/
+*.pem
