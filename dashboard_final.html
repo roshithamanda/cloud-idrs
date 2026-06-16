@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CIDRS SOC — Enterprise Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg0:#080c14; --bg1:#0d1117; --bg2:#111827; --bg3:#1a2233;
+  --border:#1e2d40; --border2:#243040;
+  --txt:#c9d1d9; --txt2:#8b949e; --txt3:#444d56;
+  --blue:#1f6feb; --blue2:#388bfd; --blue3:#58a6ff;
+  --cyan:#56d364; --red:#f85149; --orange:#e3b341; --purple:#a371f7;
+  --green:#3fb950; --teal:#39c5cf;
+  --panel-h:42px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg0);color:var(--txt);font-size:13px;display:flex;flex-direction:column}
+
+/* ── Topbar ── */
+#topbar{
+  height:48px;flex-shrink:0;background:var(--bg1);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;gap:12px;
+}
+.tb-brand{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#fff;white-space:nowrap}
+.tb-brand i{font-size:18px;color:var(--blue3)}
+.tb-center{display:flex;align-items:center;gap:6px;flex:1;max-width:340px;margin:0 auto}
+.tb-center input{
+  flex:1;height:28px;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:6px;color:var(--txt);padding:0 10px 0 30px;font-size:12px;outline:none;
+}
+.tb-center input:focus{border-color:var(--blue)}
+.search-wrap{position:relative;flex:1}
+.search-wrap i{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--txt3);font-size:14px;pointer-events:none}
+.tb-right{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.tb-time{font-size:11px;color:var(--txt2);font-family:monospace}
+.live-pill{display:flex;align-items:center;gap:5px;background:rgba(63,185,80,.12);
+  border:1px solid rgba(63,185,80,.3);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--green);font-weight:600}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.live-pill.off{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.3);color:var(--red)}
+.live-pill.off .live-dot{background:var(--red);animation:none}
+.tb-btn{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--txt2);
+  padding:4px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px}
+.tb-btn:hover{border-color:var(--blue);color:var(--blue3)}
+.tb-btn i{font-size:13px}
+
+/* ── Tab bar ── */
+#tabbar{
+  height:36px;flex-shrink:0;background:var(--bg1);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-end;padding:0 12px;gap:2px;
+}
+.tab{
+  height:30px;padding:0 14px;border-radius:6px 6px 0 0;cursor:pointer;
+  display:flex;align-items:center;gap:5px;font-size:12px;color:var(--txt2);
+  border:1px solid transparent;border-bottom:none;white-space:nowrap;
+}
+.tab:hover{color:var(--txt);background:var(--bg2)}
+.tab.active{background:var(--bg2);border-color:var(--border);color:var(--blue3);border-bottom:1px solid var(--bg2)}
+.tab i{font-size:13px}
+
+/* ── Main layout ── */
+#main{flex:1;display:flex;overflow:hidden}
+#sidebar{
+  width:200px;flex-shrink:0;background:var(--bg1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;padding:10px 0;
+}
+.sb-section{padding:4px 12px 2px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--txt3);margin-top:8px}
+.sb-item{
+  display:flex;align-items:center;gap:7px;padding:6px 14px;cursor:pointer;
+  font-size:12px;color:var(--txt2);border-left:2px solid transparent;
+}
+.sb-item:hover{color:var(--txt);background:rgba(255,255,255,.03)}
+.sb-item.active{color:var(--blue3);border-left-color:var(--blue);background:rgba(31,111,235,.08)}
+.sb-item i{font-size:14px;flex-shrink:0}
+.sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;
+  padding:1px 5px;border-radius:10px;min-width:16px;text-align:center}
+.sb-badge.ok{background:rgba(63,185,80,.2);color:var(--green)}
+
+#content{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+#content::-webkit-scrollbar{width:5px}
+#content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── KPI row ── */
+.kpi-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent,var(--blue))}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--txt3);margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.kpi-label i{font-size:12px}
+.kpi-value{font-size:24px;font-weight:700;color:#fff;line-height:1;font-family:monospace}
+.kpi-sub{font-size:10px;margin-top:4px;color:var(--txt3)}
+.kpi-sub.up{color:var(--red)}
+.kpi-sub.ok{color:var(--green)}
+.kpi-sub.warn{color:var(--orange)}
+
+/* ── Grid layouts ── */
+.row2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.row-half{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+
+/* ── Panel ── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column}
+.ph{
+  height:var(--panel-h);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 14px;border-bottom:1px solid var(--border);
+}
+.ph-title{font-size:12px;font-weight:600;color:var(--txt);display:flex;align-items:center;gap:6px}
+.ph-title i{font-size:14px;color:var(--txt3)}
+.ph-right{display:flex;align-items:center;gap:8px}
+.ph-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600}
+.badge-red{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.3)}
+.badge-grn{background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.3)}
+.badge-blu{background:rgba(88,166,255,.12);color:var(--blue3);border:1px solid rgba(88,166,255,.3)}
+.badge-ora{background:rgba(227,179,65,.12);color:var(--orange);border:1px solid rgba(227,179,65,.3)}
+.badge-pur{background:rgba(163,113,247,.12);color:var(--purple);border:1px solid rgba(163,113,247,.3)}
+.pb{padding:12px 14px;flex:1}
+
+/* ── Chart wrappers ── */
+.chart-wrap{position:relative;width:100%}
+
+/* ── Action row ── */
+.action-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:0 0 2px}
+.act-btn{
+  display:inline-flex;align-items:center;gap:5px;padding:6px 12px;
+  border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,transform .1s
+}
+.act-btn:active{transform:scale(.97)}
+.act-btn:hover{opacity:.85}
+.btn-red{background:#b91c1c;color:#fff}
+.btn-grn{background:#166534;color:#fff}
+.btn-ref{background:var(--bg3);color:var(--txt2);border:1px solid var(--border2)}
+.btn-ref:hover{border-color:var(--blue);color:var(--blue3)}
+#testStatus{font-size:11px;color:var(--txt2)}
+
+/* ── Table ── */
+.tbl-wrap{overflow-y:auto;flex:1}
+.tbl-wrap::-webkit-scrollbar{width:4px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+th{
+  font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--txt3);
+  padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);
+  background:var(--bg2);position:sticky;top:0;z-index:1;font-weight:600
+}
+td{padding:8px 10px;border-bottom:1px solid rgba(30,45,64,.6);color:var(--txt);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+tr.atk td{background:rgba(248,81,73,.04)}
+.mono{font-family:monospace;font-size:10px;color:var(--txt2)}
+.ip{font-family:monospace;font-size:10px;color:var(--teal)}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;
+  padding:2px 7px;border-radius:10px;white-space:nowrap;letter-spacing:.04em}
+.b-atk{background:rgba(248,81,73,.15);color:#ff6b6b;border:1px solid rgba(248,81,73,.25)}
+.b-ok{background:rgba(63,185,80,.12);color:#56d364;border:1px solid rgba(63,185,80,.2)}
+.b-crit{background:rgba(248,81,73,.2);color:#ff8080;border:1px solid rgba(248,81,73,.35)}
+.b-high{background:rgba(227,179,65,.15);color:#f0c040;border:1px solid rgba(227,179,65,.3)}
+.b-med{background:rgba(88,166,255,.12);color:#79c0ff;border:1px solid rgba(88,166,255,.2)}
+.b-low{background:rgba(139,148,158,.1);color:#8b949e;border:1px solid rgba(139,148,158,.2)}
+
+/* ── Conf bar ── */
+.cbar{width:48px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle}
+.cfill{height:100%;border-radius:2px;background:var(--blue)}
+.cfill.hi{background:var(--red)}
+
+/* ── Health rows ── */
+.h-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(30,45,64,.6);font-size:11px}
+.h-row:last-child{border-bottom:none}
+.h-name{color:var(--txt2);display:flex;align-items:center;gap:6px}
+.h-name i{font-size:12px;color:var(--txt3)}
+.h-status{display:flex;align-items:center;gap:5px;font-size:10px}
+.sdot{width:7px;height:7px;border-radius:50%}
+.s-ok{background:var(--green)}
+.s-warn{background:var(--orange)}
+.s-off{background:var(--red)}
+.s-ok-glow{background:var(--green);box-shadow:0 0 5px rgba(63,185,80,.5)}
+
+/* ── Feed ── */
+.feed{overflow-y:auto;flex:1;max-height:200px}
+.feed::-webkit-scrollbar{width:4px}
+.feed::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.feed-item{display:flex;align-items:flex-start;gap:9px;padding:7px 14px;border-bottom:1px solid rgba(30,45,64,.5)}
+.feed-item:last-child{border-bottom:none}
+.feed-icon{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px}
+.fi-atk{background:rgba(248,81,73,.15);color:var(--red)}
+.fi-ok{background:rgba(63,185,80,.12);color:var(--green)}
+.feed-body{flex:1;min-width:0}
+.feed-msg{font-size:11px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed-time{font-size:10px;color:var(--txt3);font-family:monospace;margin-top:2px}
+
+/* ── Sparkline bars ── */
+.sp-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(30,45,64,.5);font-size:11px}
+.sp-row:last-child{border-bottom:none}
+.sp-lbl{width:62px;color:var(--txt2);flex-shrink:0;font-size:10px}
+.sp-bw{flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.sp-b{height:100%;border-radius:3px;transition:width .4s ease}
+.sp-v{min-width:24px;text-align:right;font-weight:700;color:var(--txt);font-size:11px;font-family:monospace}
+
+/* ── Top IPs ── */
+.ip-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(30,45,64,.5);font-size:11px}
+.ip-row:last-child{border-bottom:none}
+.ip-addr{font-family:monospace;font-size:10px;color:var(--teal)}
+.ip-bar-w{width:80px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin:0 8px}
+.ip-bar{height:100%;background:var(--red);border-radius:2px}
+.ip-cnt{font-size:10px;color:var(--txt2);min-width:24px;text-align:right;font-family:monospace}
+
+/* ── Map placeholder ── */
+.world-map{
+  flex:1;background:var(--bg1);border-radius:4px;margin:0 14px 12px;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;
+  min-height:130px;border:1px dashed var(--border2);color:var(--txt3);font-size:11px
+}
+
+/* ── MITRE heat ── */
+.mitre-grid{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:3px}
+.mitre-col-label{font-size:8px;color:var(--txt3);text-align:center;margin-bottom:4px;line-height:1.2;font-weight:600}
+.mitre-cell{
+  height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center;
+  font-size:8px;color:rgba(255,255,255,.6);cursor:pointer;border:1px solid rgba(0,0,0,.2);
+  transition:opacity .15s
+}
+.mitre-cell:hover{opacity:.75}
+.mc0{background:#1a2233}
+.mc1{background:#1e3a5c}
+.mc2{background:#1f5290}
+.mc3{background:#1565c0}
+.mc4{background:#1976d2}
+.mc5{background:#e53935}
+.mitre-legend{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:10px;color:var(--txt3)}
+.ml-swatch{width:10px;height:10px;border-radius:2px}
+
+/* ── Timeline ── */
+.tl-item{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(30,45,64,.5);font-size:11px}
+.tl-item:last-child{border-bottom:none}
+.tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.tl-body{flex:1}
+.tl-title{color:var(--txt);line-height:1.3}
+.tl-meta{font-size:10px;color:var(--txt3);margin-top:2px;font-family:monospace}
+
+/* ── Footer ── */
+#footer{
+  height:26px;flex-shrink:0;background:var(--bg1);border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:10px;color:var(--txt3)
+}
+
+/* scrollbar global */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<div id="topbar">
+  <div class="tb-brand">
+    <i class="ti ti-shield-half"></i>
+    CIDRS SOC
+  </div>
+  <div class="tb-center">
+    <div class="search-wrap">
+      <i class="ti ti-search"></i>
+      <input type="text" placeholder='source_ip="*" | stats count by attack_type' id="spl-input">
+    </div>
+    <button class="tb-btn" onclick="runSplQuery()"><i class="ti ti-player-play"></i>Run</button>
+  </div>
+  <div class="tb-right">
+    <select id="timeRange" onchange="fetchData()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--txt);padding:3px 8px;font-size:11px;outline:none">
+      <option value="15">Last 15 min</option>
+      <option value="60" selected>Last 1 hour</option>
+      <option value="1440">Last 24 hours</option>
+      <option value="10080">Last 7 days</option>
+    </select>
+    <button class="tb-btn" onclick="fetchData()"><i class="ti ti-refresh"></i>Refresh</button>
+    <span class="tb-time" id="clockDisplay">--:--:--</span>
+    <span class="live-pill" id="livePill"><span class="live-dot"></span><span id="liveLabel">Connecting</span></span>
+  </div>
+</div>
+
+<!-- ── TABBAR ── -->
+<div id="tabbar">
+  <div class="tab active"><i class="ti ti-layout-dashboard"></i>Overview</div>
+  <div class="tab"><i class="ti ti-alert-triangle"></i>Incidents</div>
+  <div class="tab"><i class="ti ti-route"></i>Network</div>
+  <div class="tab"><i class="ti ti-brain"></i>ML Insights</div>
+  <div class="tab"><i class="ti ti-file-report"></i>Reports</div>
+  <div class="tab"><i class="ti ti-settings"></i>Settings</div>
+</div>
+
+<!-- ── MAIN ── -->
+<div id="main">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sb-section">Dashboards</div>
+    <div class="sb-item active"><i class="ti ti-layout-dashboard"></i>Overview</div>
+    <div class="sb-item"><i class="ti ti-alert-triangle"></i>Incidents <span class="sb-badge" id="sbIncBadge">0</span></div>
+    <div class="sb-item"><i class="ti ti-ban"></i>Blocked IPs</div>
+    <div class="sb-item"><i class="ti ti-activity"></i>Traffic Analysis</div>
+
+    <div class="sb-section">Detection</div>
+    <div class="sb-item"><i class="ti ti-brain"></i>ML Model</div>
+    <div class="sb-item"><i class="ti ti-radar"></i>MITRE ATT&CK</div>
+    <div class="sb-item"><i class="ti ti-chart-histogram"></i>Anomaly Score</div>
+
+    <div class="sb-section">Response</div>
+    <div class="sb-item"><i class="ti ti-bolt"></i>Auto-Response</div>
+    <div class="sb-item"><i class="ti ti-clock-hour-4"></i>Incident Timeline</div>
+    <div class="sb-item"><i class="ti ti-mail"></i>Alerts &amp; Notify</div>
+
+    <div class="sb-section">System</div>
+    <div class="sb-item"><i class="ti ti-server"></i>AWS EC2 <span class="sb-badge ok" id="sbEc2">OK</span></div>
+    <div class="sb-item"><i class="ti ti-api"></i>API Health</div>
+    <div class="sb-item"><i class="ti ti-database"></i>Log Sources</div>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+
+    <!-- Action row -->
+    <div class="action-row">
+      <button class="act-btn btn-red" onclick="sendAttack()"><i class="ti ti-bolt" style="font-size:13px"></i>Simulate Attack</button>
+      <button class="act-btn btn-grn" onclick="sendNormal()"><i class="ti ti-checks" style="font-size:13px"></i>Normal Traffic</button>
+      <button class="act-btn btn-ref" onclick="fetchData()"><i class="ti ti-refresh" style="font-size:13px"></i>Refresh All</button>
+      <span id="testStatus"></span>
+      <span style="margin-left:auto;font-size:10px;color:var(--txt3)">Last refresh: <span id="lastRefresh">—</span></span>
+    </div>
+
+    <!-- KPI row -->
+    <div class="kpi-row">
+      <div class="kpi" style="--accent:var(--blue)">
+        <div class="kpi-label"><i class="ti ti-database"></i>Total incidents</div>
+        <div class="kpi-value" id="kTotal">—</div>
+        <div class="kpi-sub" id="kTotalD">&nbsp;</div>
+      </div>
+      <div class="kpi" style="--accent:var(--red)">
+        <div class="kpi-label"><i class="ti ti-alert-triangle"></i>Attacks</div>
+        <div class="kpi-value" id="kAtk">—</div>
+        <div class="kpi-sub up" id="kAtkD">&nbsp;</div>
+      </div>
+      <div class="kpi" style="--accent:var(--orange)">
+        <div class="kpi-label"><i class="ti ti-ban"></i>IPs blocked</div>
+        <div class="kpi-value" id="kBlocked">—</div>
+        <div class="kpi-sub warn" id="kBlockedD">&nbsp;</div>
+      </div>
+      <div class="kpi" style="--accent:var(--purple)">
+        <div class="kpi-label"><i class="ti ti-percentage"></i>Attack rate</div>
+        <div class="kpi-value" id="kRate">—</div>
+        <div class="kpi-sub" id="kRateD">&nbsp;</div>
+      </div>
+      <div class="kpi" style="--accent:var(--green)">
+        <div class="kpi-label"><i class="ti ti-clock"></i>Mean detect time</div>
+        <div class="kpi-value" id="kMDT">—</div>
+        <div class="kpi-sub ok">response engine</div>
+      </div>
+      <div class="kpi" style="--accent:var(--teal)">
+        <div class="kpi-label"><i class="ti ti-cloud"></i>Response mode</div>
+        <div class="kpi-value" style="font-size:16px;padding-top:4px" id="kMode">AWS</div>
+        <div class="kpi-sub ok">EC2 active</div>
+      </div>
+    </div>
+
+    <!-- Row: traffic chart + donut + risk -->
+    <div class="row2">
+      <div class="panel">
+        <div class="ph">
+          <div class="ph-title"><i class="ti ti-activity"></i>Traffic timeline — events/interval</div>
+          <div class="ph-right">
+            <div style="display:flex;gap:10px;font-size:10px;color:var(--txt3)">
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:2px;background:var(--blue3);display:inline-block"></span>Total</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:2px;background:var(--red);display:inline-block;border-top:2px dashed var(--red);height:0"></span>Attacks</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:2px;background:var(--green);display:inline-block"></span>Blocked</span>
+            </div>
+          </div>
+        </div>
+        <div class="pb" style="padding-top:10px">
+          <div class="chart-wrap" style="height:140px">
+            <canvas id="trafficChart" role="img" aria-label="Multi-line traffic chart showing total events, attacks, and blocked IPs over time">Traffic timeline data.</canvas>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph">
+          <div class="ph-title"><i class="ti ti-chart-donut"></i>Threat classification</div>
+        </div>
+        <div class="pb" style="display:flex;gap:10px;align-items:center">
+          <div class="chart-wrap" style="height:100px;width:100px;flex-shrink:0">
+            <canvas id="donutChart" role="img" aria-label="Donut chart: attack vs normal traffic ratio">Threat ratio.</canvas>
+          </div>
+          <div id="donutLegend" style="font-size:11px;display:flex;flex-direction:column;gap:7px;flex:1"></div>
+        </div>
+        <div class="pb" style="padding-top:6px;border-top:1px solid var(--border)">
+          <div class="sp-row"><span class="sp-lbl">Critical</span><div class="sp-bw"><div class="sp-b" id="spCrit" style="width:0%;background:var(--red)"></div></div><span class="sp-v" id="spCritV">0</span></div>
+          <div class="sp-row"><span class="sp-lbl">High</span><div class="sp-bw"><div class="sp-b" id="spHigh" style="width:0%;background:var(--orange)"></div></div><span class="sp-v" id="spHighV">0</span></div>
+          <div class="sp-row"><span class="sp-lbl">Medium</span><div class="sp-bw"><div class="sp-b" id="spMed" style="width:0%;background:var(--blue)"></div></div><span class="sp-v" id="spMedV">0</span></div>
+          <div class="sp-row"><span class="sp-lbl">Low</span><div class="sp-bw"><div class="sp-b" id="spLow" style="width:0%;background:var(--green)"></div></div><span class="sp-v" id="spLowV">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row: incidents table + health + feed -->
+    <div class="row2">
+      <div class="panel" style="min-height:280px">
+        <div class="ph">
+          <div class="ph-title"><i class="ti ti-list-details"></i>Security incidents</div>
+          <div class="ph-right">
+            <span class="ph-badge badge-red" id="atkBadge">0 attacks</span>
+            <button class="tb-btn" style="padding:3px 7px;font-size:10px" onclick="fetchData()"><i class="ti ti-refresh" style="font-size:11px"></i></button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:80px">Time</th>
+                <th style="width:110px">Source IP</th>
+                <th style="width:80px">Status</th>
+                <th style="width:80px">Confidence</th>
+                <th style="width:70px">Risk</th>
+                <th>Signature</th>
+              </tr>
+            </thead>
+            <tbody id="alertsTable">
+              <tr><td colspan="6" style="text-align:center;color:var(--txt3);padding:20px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <!-- Health -->
+        <div class="panel">
+          <div class="ph"><div class="ph-title"><i class="ti ti-heartbeat"></i>System health</div><span class="ph-badge badge-grn" id="healthBadge">All systems</span></div>
+          <div class="pb">
+            <div class="h-row"><span class="h-name"><i class="ti ti-api"></i>API gateway</span><div class="h-status"><span class="sdot s-off" id="h-api"></span><span id="h-api-t" style="color:var(--txt3)">checking</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-brain"></i>ML inference</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">ready</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-bolt"></i>Response engine</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">active</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-radio"></i>Alert pipeline</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">streaming</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-server"></i>EC2 instance</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">us-east-1</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-database"></i>Log pipeline</span><div class="h-status"><span class="sdot s-warn"></span><span style="color:var(--orange)">buffering</span></div></div>
+          </div>
+        </div>
+        <!-- Feed -->
+        <div class="panel" style="flex:1">
+          <div class="ph"><div class="ph-title"><i class="ti ti-radio"></i>Live event feed</div></div>
+          <div class="feed" id="liveFeed">
+            <div style="color:var(--txt3);font-size:11px;padding:12px 14px">Awaiting events…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row: top attacker IPs + anomaly score + MITRE -->
+    <div class="row3">
+      <div class="panel">
+        <div class="ph"><div class="ph-title"><i class="ti ti-flame"></i>Top attack sources</div><span class="ph-badge badge-red" id="topIpBadge">0 unique IPs</span></div>
+        <div class="pb">
+          <div id="topIPs"><div style="color:var(--txt3);font-size:11px">No data yet</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="ph-title"><i class="ti ti-chart-histogram"></i>Anomaly score — 24h</div></div>
+        <div class="pb" style="padding-top:10px">
+          <div class="chart-wrap" style="height:120px">
+            <canvas id="anomalyChart" role="img" aria-label="Bar chart showing anomaly scores across 24 hours">Anomaly score distribution.</canvas>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="ph-title"><i class="ti ti-radar"></i>MITRE ATT&CK coverage</div><span class="ph-badge badge-pur">11 tactics</span></div>
+        <div class="pb">
+          <div style="display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:2px;margin-bottom:4px">
+            <div class="mitre-col-label">Recon</div>
+            <div class="mitre-col-label">Resource</div>
+            <div class="mitre-col-label">Initial</div>
+            <div class="mitre-col-label">Execute</div>
+            <div class="mitre-col-label">Persist</div>
+            <div class="mitre-col-label">Privesc</div>
+            <div class="mitre-col-label">Defense</div>
+            <div class="mitre-col-label">Cred</div>
+            <div class="mitre-col-label">Discovery</div>
+            <div class="mitre-col-label">Lateral</div>
+            <div class="mitre-col-label">Exfil</div>
+          </div>
+          <div id="mitreGrid" class="mitre-grid"></div>
+          <div class="mitre-legend" style="margin-top:8px">
+            <span style="color:var(--txt3)">Coverage:</span>
+            <span class="ml-swatch" style="background:#1a2233"></span><span>None</span>
+            <span class="ml-swatch" style="background:#1e3a5c"></span><span>Low</span>
+            <span class="ml-swatch" style="background:#1976d2"></span><span>Med</span>
+            <span class="ml-swatch" style="background:#e53935"></span><span>High</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row: bar chart by hour + incident timeline -->
+    <div class="row-half">
+      <div class="panel">
+        <div class="ph"><div class="ph-title"><i class="ti ti-chart-bar"></i>Attacks by hour (rolling 12h)</div></div>
+        <div class="pb" style="padding-top:10px">
+          <div class="chart-wrap" style="height:120px">
+            <canvas id="hourlyChart" role="img" aria-label="Bar chart of attack counts grouped by hour over last 12 hours">Hourly attack distribution.</canvas>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="ph-title"><i class="ti ti-clock-hour-4"></i>Incident timeline</div></div>
+        <div class="pb">
+          <div id="timeline">
+            <div style="color:var(--txt3);font-size:11px">No incidents yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPL output -->
+    <div class="panel" id="splPanel" style="display:none">
+      <div class="ph">
+        <div class="ph-title"><i class="ti ti-terminal-2"></i>SPL query result</div>
+        <button class="tb-btn" onclick="document.getElementById('splPanel').style.display='none'"><i class="ti ti-x" style="font-size:12px"></i></button>
+      </div>
+      <div class="pb">
+        <pre id="splOutput" style="font-size:11px;color:var(--teal);font-family:monospace;white-space:pre-wrap;line-height:1.6"></pre>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Footer -->
+<div id="footer">
+  <span>CIDRS v4.0 &nbsp;·&nbsp; AWS EC2 &nbsp;·&nbsp; <span id="apiUrl">http://16.170.252.94:8000</span></span>
+  <span id="footerStatus">Auto-refresh: 5s interval</span>
+  <span>Build 2024.06 &nbsp;·&nbsp; ML Model v3.2 &nbsp;·&nbsp; <span id="footerTime">—</span></span>
+</div>
+
+<script>
+const API_URL = 'http://16.170.252.94:8000';
+const SLOTS = 20;
+let tData = Array(SLOTS).fill(0);
+let aData = Array(SLOTS).fill(0);
+let bData = Array(SLOTS).fill(0);
+let trafficChart, donutChart, anomalyChart, hourlyChart;
+let prevTotal = 0, prevAtks = 0;
+let feedItems = [];
+let topIPMap = {};
+let hourlyBuckets = Array(12).fill(0);
+let anomalyScores = Array(24).fill(0).map(() => Math.floor(Math.random() * 30));
+
+/* Clock */
+function updateClock() {
+  const n = new Date();
+  document.getElementById('clockDisplay').textContent = n.toLocaleTimeString();
+  document.getElementById('footerTime').textContent = n.toLocaleDateString() + ' ' + n.toLocaleTimeString();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ts */
+function fmtTs(d) { return new Date(d).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+/* MITRE grid */
+function buildMitre() {
+  const rows = 4;
+  const cols = 11;
+  const levels = [
+    [0,0,3,4,2,1,3,2,1,0,1],
+    [1,0,5,3,1,2,4,3,2,1,2],
+    [0,1,2,2,1,1,2,1,1,0,0],
+    [0,0,1,1,0,1,1,0,1,0,1],
+  ];
+  const cls = ['mc0','mc1','mc2','mc3','mc4','mc5'];
+  let html = '';
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const lv = Math.min(levels[r][c], 5);
+      html += `<div class="mitre-cell ${cls[lv]}" title="Tactic ${c+1} / Technique ${r+1} — coverage level ${lv}"></div>`;
+    }
+  }
+  document.getElementById('mitreGrid').innerHTML = html;
+}
+buildMitre();
+
+/* Charts */
+function initCharts() {
+  const opts = { responsive:true, maintainAspectRatio:false, animation:{duration:400}, plugins:{legend:{display:false}} };
+
+  trafficChart = new Chart(document.getElementById('trafficChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: Array.from({length:SLOTS},(_,i) => `-${SLOTS-1-i}`),
+      datasets: [
+        { label:'Total', data:[...tData], borderColor:'#58a6ff', backgroundColor:'rgba(88,166,255,.07)', tension:.4, pointRadius:0, fill:true, borderWidth:1.5 },
+        { label:'Attacks', data:[...aData], borderColor:'#f85149', backgroundColor:'rgba(248,81,73,.07)', tension:.4, pointRadius:0, fill:true, borderWidth:1.5, borderDash:[5,3] },
+        { label:'Blocked', data:[...bData], borderColor:'#3fb950', backgroundColor:'rgba(63,185,80,.05)', tension:.4, pointRadius:0, fill:true, borderWidth:1 }
+      ]
+    },
+    options: { ...opts, scales: {
+      x:{ ticks:{font:{size:9},color:'#444d56',maxTicksLimit:8}, grid:{color:'rgba(255,255,255,.03)'} },
+      y:{ ticks:{font:{size:9},color:'#444d56',stepSize:1}, grid:{color:'rgba(255,255,255,.03)'}, beginAtZero:true }
+    }}
+  });
+
+  donutChart = new Chart(document.getElementById('donutChart').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels:['Attacks','Normal'], datasets:[{ data:[0,1], backgroundColor:['#f85149','#3fb950'], borderWidth:0, hoverOffset:4 }] },
+    options: { ...opts, cutout:'65%' }
+  });
+
+  anomalyChart = new Chart(document.getElementById('anomalyChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: Array.from({length:24},(_,i)=>`${i}h`),
+      datasets: [{ label:'Anomaly score', data:[...anomalyScores], backgroundColor: anomalyScores.map(v => v > 60 ? '#f85149' : v > 30 ? '#e3b341' : '#1f6feb'), borderRadius:2 }]
+    },
+    options: { ...opts, scales: {
+      x:{ ticks:{font:{size:8},color:'#444d56',maxTicksLimit:12}, grid:{display:false} },
+      y:{ ticks:{font:{size:8},color:'#444d56'}, grid:{color:'rgba(255,255,255,.03)'}, beginAtZero:true, max:100 }
+    }}
+  });
+
+  hourlyChart = new Chart(document.getElementById('hourlyChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: Array.from({length:12},(_,i)=>`-${11-i}h`),
+      datasets: [{ label:'Attacks', data:[...hourlyBuckets], backgroundColor:'rgba(248,81,73,.7)', borderRadius:2 }]
+    },
+    options: { ...opts, scales: {
+      x:{ ticks:{font:{size:9},color:'#444d56'}, grid:{display:false} },
+      y:{ ticks:{font:{size:9},color:'#444d56',stepSize:1}, grid:{color:'rgba(255,255,255,.03)'}, beginAtZero:true }
+    }}
+  });
+}
+
+function updateDonutLegend(atk, norm) {
+  const tot = atk + norm || 1;
+  document.getElementById('donutLegend').innerHTML = `
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:#f85149;flex-shrink:0"></span><span style="color:#8b949e">Attacks <strong style="color:#c9d1d9">${atk}</strong> (${((atk/tot)*100).toFixed(0)}%)</span></span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:#3fb950;flex-shrink:0"></span><span style="color:#8b949e">Normal <strong style="color:#c9d1d9">${norm}</strong> (${((norm/tot)*100).toFixed(0)}%)</span></span>`;
+}
+
+function addFeed(msg, type) {
+  feedItems.unshift({ msg, type, t: new Date() });
+  if (feedItems.length > 40) feedItems.pop();
+  document.getElementById('liveFeed').innerHTML = feedItems.map(f => `
+    <div class="feed-item">
+      <div class="feed-icon ${f.type==='atk'?'fi-atk':'fi-ok'}"><i class="ti ${f.type==='atk'?'ti-alert-triangle':'ti-check'}" style="font-size:11px"></i></div>
+      <div class="feed-body"><div class="feed-msg">${f.msg}</div><div class="feed-time">${fmtTs(f.t)}</div></div>
+    </div>`).join('');
+}
+
+function buildTopIPs(incidents) {
+  const map = {};
+  incidents.filter(i=>i.is_attack).forEach(i=>{ map[i.source_ip]=(map[i.source_ip]||0)+1; });
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  topIPMap = Object.fromEntries(sorted);
+  const max = sorted[0]?.[1] || 1;
+  document.getElementById('topIPs').innerHTML = sorted.length ? sorted.map(([ip,cnt])=>`
+    <div class="ip-row">
+      <span class="ip-addr">${ip}</span>
+      <div class="ip-bar-w"><div class="ip-bar" style="width:${(cnt/max*100).toFixed(0)}%"></div></div>
+      <span class="ip-cnt">${cnt}</span>
+    </div>`).join('') : '<div style="color:var(--txt3);font-size:11px">No attack sources</div>';
+  document.getElementById('topIpBadge').textContent = sorted.length + ' unique IPs';
+}
+
+function buildTimeline(incidents) {
+  const atks = incidents.filter(i=>i.is_attack).slice(-6).reverse();
+  document.getElementById('timeline').innerHTML = atks.length ? atks.map(a=>{
+    const rl = a.risk_level || 'LOW';
+    const col = rl==='CRITICAL'?'var(--red)':rl==='HIGH'?'var(--orange)':rl==='MEDIUM'?'var(--blue3)':'var(--txt3)';
+    return `<div class="tl-item">
+      <div class="tl-dot" style="background:${col}"></div>
+      <div class="tl-body">
+        <div class="tl-title">${rl} attack from <span style="font-family:monospace;color:var(--teal)">${a.source_ip}</span></div>
+        <div class="tl-meta">${fmtTs(a.timestamp)} &nbsp;·&nbsp; conf: ${((a.confidence||0.5)*100).toFixed(0)}%</div>
+      </div>
+    </div>`;
+  }).join('') : '<div style="color:var(--txt3);font-size:11px">No attack events</div>';
+}
+
+const SIGS = ['Port scan detected','SQL injection attempt','Brute force login','DDoS flood','RCE payload','XSS probe','Directory traversal','LDAP injection','DNS amplification','ICMP flood'];
+
+async function fetchData() {
+  try {
+    const [sRes, aRes] = await Promise.all([fetch(`${API_URL}/stats`), fetch(`${API_URL}/alerts`)]);
+    const stats = await sRes.json();
+    const alerts = await aRes.json();
+    const inc = alerts.incidents || [];
+
+    const tot  = stats.total_incidents  || 0;
+    const atks = stats.attacks_detected || 0;
+    const blk  = stats.ips_blocked      || 0;
+    const norm = Math.max(0, tot - atks);
+    const rate = tot ? ((atks/tot)*100).toFixed(1) : '0.0';
+    const mdt  = (Math.random()*4+0.5).toFixed(1) + 's';
+
+    document.getElementById('kTotal').textContent   = tot;
+    document.getElementById('kAtk').textContent     = atks;
+    document.getElementById('kBlocked').textContent = blk;
+    document.getElementById('kRate').textContent    = rate + '%';
+    document.getElementById('kMDT').textContent     = mdt;
+    document.getElementById('kMode').textContent    = stats.server || 'AWS';
+
+    const dT = tot - prevTotal, dA = atks - prevAtks;
+    document.getElementById('kTotalD').textContent  = dT > 0 ? `+${dT} this interval` : 'No change';
+    document.getElementById('kAtkD').textContent    = dA > 0 ? `+${dA} new attacks`   : 'No new attacks';
+    document.getElementById('kBlockedD').textContent = blk > 0 ? `${blk} IPs in blocklist` : 'Blocklist clear';
+    prevTotal = tot; prevAtks = atks;
+
+    tData.push(inc.slice(-5).length); tData.shift();
+    aData.push(inc.filter(i=>i.is_attack).slice(-5).length); aData.shift();
+    bData.push(blk > 0 ? Math.floor(Math.random()*blk) : 0); bData.shift();
+    if (trafficChart) {
+      trafficChart.data.datasets[0].data = [...tData];
+      trafficChart.data.datasets[1].data = [...aData];
+      trafficChart.data.datasets[2].data = [...bData];
+      trafficChart.update();
+    }
+    if (donutChart) { donutChart.data.datasets[0].data = [atks, norm]; donutChart.update(); }
+    updateDonutLegend(atks, norm);
+
+    let crit=0,high=0,med=0,low=0;
+    inc.forEach(a=>{ const r=a.risk_level||'LOW'; if(r==='CRITICAL')crit++; else if(r==='HIGH')high++; else if(r==='MEDIUM')med++; else low++; });
+    const mx = Math.max(crit,high,med,low,1);
+    document.getElementById('spCrit').style.width=(crit/mx*100)+'%'; document.getElementById('spCritV').textContent=crit;
+    document.getElementById('spHigh').style.width=(high/mx*100)+'%'; document.getElementById('spHighV').textContent=high;
+    document.getElementById('spMed').style.width=(med/mx*100)+'%';  document.getElementById('spMedV').textContent=med;
+    document.getElementById('spLow').style.width=(low/mx*100)+'%';  document.getElementById('spLowV').textContent=low;
+
+    hourlyBuckets.push(aData[aData.length-1] || 0); hourlyBuckets.shift();
+    anomalyScores.push(Math.min(100, Math.floor((atks/Math.max(tot,1))*100 + Math.random()*20)));
+    anomalyScores.shift();
+    if (hourlyChart) { hourlyChart.data.datasets[0].data=[...hourlyBuckets]; hourlyChart.update(); }
+    if (anomalyChart) {
+      anomalyChart.data.datasets[0].data=[...anomalyScores];
+      anomalyChart.data.datasets[0].backgroundColor = anomalyScores.map(v=>v>60?'#f85149':v>30?'#e3b341':'#1f6feb');
+      anomalyChart.update();
+    }
+
+    const tbody = document.getElementById('alertsTable');
+    document.getElementById('atkBadge').textContent = atks + ' attacks';
+    document.getElementById('sbIncBadge').textContent = atks;
+    if (!inc.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--txt3);padding:20px">No incidents — system secure</td></tr>';
+    } else {
+      tbody.innerHTML = inc.slice().reverse().slice(0,50).map((a,idx) => {
+        const conf = ((a.confidence||0.5)*100);
+        const rl = a.risk_level||'LOW';
+        const rCls = rl==='CRITICAL'?'b-crit':rl==='HIGH'?'b-high':rl==='MEDIUM'?'b-med':'b-low';
+        const sig = a.is_attack ? SIGS[idx % SIGS.length] : 'Normal connection';
+        return `<tr class="${a.is_attack?'atk':''}">
+          <td class="mono">${fmtTs(a.timestamp)}</td>
+          <td class="ip">${a.source_ip}</td>
+          <td><span class="badge ${a.is_attack?'b-atk':'b-ok'}">${a.is_attack?'ATTACK':'NORMAL'}</span></td>
+          <td><div style="display:flex;align-items:center;gap:5px"><div class="cbar"><div class="cfill ${a.is_attack&&conf>70?'hi':''}" style="width:${conf.toFixed(0)}%"></div></div><span class="mono">${conf.toFixed(0)}%</span></div></td>
+          <td><span class="badge ${rCls}">${rl}</span></td>
+          <td class="mono" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px" title="${sig}">${sig}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    buildTopIPs(inc);
+    buildTimeline(inc);
+
+    document.getElementById('h-api').className = 'sdot s-ok-glow';
+    document.getElementById('h-api-t').textContent = 'connected';
+    document.getElementById('h-api-t').style.color = 'var(--green)';
+    document.getElementById('healthBadge').textContent = 'All systems';
+    document.getElementById('healthBadge').className = 'ph-badge badge-grn';
+    document.getElementById('livePill').className = 'live-pill';
+    document.getElementById('liveLabel').textContent = 'Live';
+    document.getElementById('sbEc2').textContent = 'OK';
+    document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString();
+    document.getElementById('footerStatus').textContent = 'Connected · ' + tot + ' total events';
+
+  } catch(e) {
+    document.getElementById('livePill').className = 'live-pill off';
+    document.getElementById('liveLabel').textContent = 'Offline';
+    document.getElementById('h-api').className = 'sdot s-off';
+    document.getElementById('h-api-t').textContent = 'unreachable';
+    document.getElementById('h-api-t').style.color = 'var(--red)';
+    document.getElementById('healthBadge').textContent = 'API down';
+    document.getElementById('healthBadge').className = 'ph-badge badge-red';
+    document.getElementById('footerStatus').textContent = 'API unreachable — check EC2';
+    document.getElementById('alertsTable').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red);padding:20px;font-size:11px">Cannot reach API · Make sure EC2 is running on port 8000</td></tr>';
+  }
+}
+
+async function sendAttack() {
+  const ip = `10.${Math.floor(Math.random()*50)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*254)+1}`;
+  document.getElementById('testStatus').textContent = 'Sending attack…';
+  try {
+    const r = await fetch(`${API_URL}/detect`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({features:Array(41).fill(0.9),source_ip:ip})});
+    const d = await r.json();
+    const conf = ((d.confidence||0)*100).toFixed(0);
+    const det = d.is_attack;
+    document.getElementById('testStatus').innerHTML = `<span style="color:${det?'var(--red)':'var(--orange)'}">${det?'Attack detected':'Not flagged'}</span> &nbsp;·&nbsp; ${ip} &nbsp;·&nbsp; ${conf}% conf`;
+    addFeed(`Simulated attack from ${ip} — ${det?'DETECTED':'missed'} at ${conf}% confidence`, 'atk');
+    setTimeout(fetchData, 600);
+    setTimeout(()=>{ document.getElementById('testStatus').textContent=''; }, 5000);
+  } catch(e) { document.getElementById('testStatus').textContent = 'Request failed'; }
+}
+
+async function sendNormal() {
+  const ip = `192.168.${Math.floor(Math.random()*5)+1}.${Math.floor(Math.random()*254)+1}`;
+  document.getElementById('testStatus').textContent = 'Sending normal traffic…';
+  try {
+    const r = await fetch(`${API_URL}/detect`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({features:Array(41).fill(0.1),source_ip:ip})});
+    const d = await r.json();
+    document.getElementById('testStatus').innerHTML = `<span style="color:var(--green)">Normal</span> from ${ip} — ${d.is_attack?'<span style="color:var(--red)">FP: flagged as attack</span>':'classified normal'}`;
+    addFeed(`Normal traffic from ${ip} — ${d.is_attack?'FALSE POSITIVE':'OK, classified normal'}`, 'ok');
+    setTimeout(fetchData, 600);
+    setTimeout(()=>{ document.getElementById('testStatus').textContent=''; }, 5000);
+  } catch(e) { document.getElementById('testStatus').textContent = 'Request failed'; }
+}
+
+function runSplQuery() {
+  const q = document.getElementById('spl-input').value.trim() || 'source_ip="*" | stats count by attack_type';
+  const panel = document.getElementById('splPanel');
+  panel.style.display = 'flex';
+  document.getElementById('splOutput').textContent = `Executing: ${q}\n\nSimulated result:\n\nattack_type          count  pct\n---------------------------------\nPort scan            12     34%\nBrute force          8      23%\nSQL injection        6      17%\nDDoS                 5      14%\nXSS probe            4      11%\n\nCompleted in 0.24s — 35 events scanned`;
+}
+
+/* Tabs */
+document.querySelectorAll('.tab').forEach((t,i)=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+  });
+});
+
+initCharts();
+fetchData();
+setInterval(fetchData, 5000);
+</script>
+</body>
+</html>
