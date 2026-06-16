@@ -212,12 +212,31 @@ tr.atk td{background:rgba(248,81,73,.04)}
 .ip-bar{height:100%;background:var(--red);border-radius:2px}
 .ip-cnt{font-size:10px;color:var(--txt2);min-width:24px;text-align:right;font-family:monospace}
 
-/* ── Map placeholder ── */
-.world-map{
-  flex:1;background:var(--bg1);border-radius:4px;margin:0 14px 12px;
-  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;
-  min-height:130px;border:1px dashed var(--border2);color:var(--txt3);font-size:11px
+/* ── World Map ── */
+#threatMapPanel { position:relative; }
+#threatMapSvg { width:100%; display:block; }
+.map-country { fill:#0d1f33; stroke:#1e3a55; stroke-width:0.4; transition:fill .2s; }
+.map-country:hover { fill:#1a3050; }
+.map-graticule { fill:none; stroke:#0f2035; stroke-width:0.3; }
+.map-ocean { fill:#060e1a; }
+.attack-dot {
+  r:4; fill:var(--red); opacity:0.9;
+  filter:url(#redGlow);
+  animation:pulse-dot 1.5s ease-in-out infinite;
 }
+.attack-dot-inner { r:2; fill:#fff; opacity:0.8; }
+@keyframes pulse-dot { 0%,100%{r:4;opacity:.9} 50%{r:6;opacity:.5} }
+.arc-line { fill:none; stroke:var(--red); stroke-width:1; opacity:0; stroke-dasharray:200; stroke-dashoffset:200; }
+.arc-line.fly { animation:fly-arc 1.2s ease-out forwards; }
+@keyframes fly-arc { 0%{opacity:.7;stroke-dashoffset:200} 100%{opacity:0;stroke-dashoffset:0} }
+.target-dot { fill:var(--orange); r:3; }
+.map-legend { display:flex; align-items:center; gap:14px; padding:6px 14px 10px; font-size:10px; color:var(--txt3); }
+.map-leg-item { display:flex; align-items:center; gap:5px; }
+.map-leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+#mapStats { display:flex; gap:16px; padding:8px 14px; border-top:1px solid var(--border); font-size:11px; }
+.mstat { display:flex; flex-direction:column; gap:2px; }
+.mstat-v { font-size:16px; font-weight:700; color:#fff; font-family:monospace; }
+.mstat-l { font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:var(--txt3); }
 
 /* ── MITRE heat ── */
 .mitre-grid{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:3px}
@@ -251,8 +270,9 @@ tr.atk td{background:rgba(248,81,73,.04)}
   display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:10px;color:var(--txt3)
 }
 
-/* scrollbar global */
-::-webkit-scrollbar{width:5px;height:5px}
+/* ── Views ── */
+.view { display:flex; flex-direction:column; gap:12px; }
+.view.hidden { display:none !important; }
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 </style>
@@ -287,12 +307,12 @@ tr.atk td{background:rgba(248,81,73,.04)}
 
 <!-- ── TABBAR ── -->
 <div id="tabbar">
-  <div class="tab active"><i class="ti ti-layout-dashboard"></i>Overview</div>
-  <div class="tab"><i class="ti ti-alert-triangle"></i>Incidents</div>
-  <div class="tab"><i class="ti ti-route"></i>Network</div>
-  <div class="tab"><i class="ti ti-brain"></i>ML Insights</div>
-  <div class="tab"><i class="ti ti-file-report"></i>Reports</div>
-  <div class="tab"><i class="ti ti-settings"></i>Settings</div>
+  <div class="tab active" data-view="overview"><i class="ti ti-layout-dashboard"></i>Overview</div>
+  <div class="tab" data-view="overview"><i class="ti ti-alert-triangle"></i>Incidents</div>
+  <div class="tab" data-view="overview"><i class="ti ti-route"></i>Network</div>
+  <div class="tab" data-view="mlmodel"><i class="ti ti-brain"></i>ML Insights</div>
+  <div class="tab" data-view="mitre"><i class="ti ti-radar"></i>MITRE</div>
+  <div class="tab" data-view="logsources"><i class="ti ti-settings"></i>System</div>
 </div>
 
 <!-- ── MAIN ── -->
@@ -301,31 +321,32 @@ tr.atk td{background:rgba(248,81,73,.04)}
   <!-- Sidebar -->
   <div id="sidebar">
     <div class="sb-section">Dashboards</div>
-    <div class="sb-item active"><i class="ti ti-layout-dashboard"></i>Overview</div>
-    <div class="sb-item"><i class="ti ti-alert-triangle"></i>Incidents <span class="sb-badge" id="sbIncBadge">0</span></div>
-    <div class="sb-item"><i class="ti ti-ban"></i>Blocked IPs</div>
-    <div class="sb-item"><i class="ti ti-activity"></i>Traffic Analysis</div>
+    <div class="sb-item active" data-view="overview"><i class="ti ti-layout-dashboard"></i>Overview</div>
+    <div class="sb-item" data-view="overview"><i class="ti ti-alert-triangle"></i>Incidents <span class="sb-badge" id="sbIncBadge">0</span></div>
+    <div class="sb-item" data-view="autoresponse"><i class="ti ti-ban"></i>Blocked IPs</div>
+    <div class="sb-item" data-view="overview"><i class="ti ti-activity"></i>Traffic Analysis</div>
 
     <div class="sb-section">Detection</div>
-    <div class="sb-item"><i class="ti ti-brain"></i>ML Model</div>
-    <div class="sb-item"><i class="ti ti-radar"></i>MITRE ATT&CK</div>
-    <div class="sb-item"><i class="ti ti-chart-histogram"></i>Anomaly Score</div>
+    <div class="sb-item" data-view="mlmodel"><i class="ti ti-brain"></i>ML Model</div>
+    <div class="sb-item" data-view="mitre"><i class="ti ti-radar"></i>MITRE ATT&CK</div>
+    <div class="sb-item" data-view="overview"><i class="ti ti-chart-histogram"></i>Anomaly Score</div>
 
     <div class="sb-section">Response</div>
-    <div class="sb-item"><i class="ti ti-bolt"></i>Auto-Response</div>
-    <div class="sb-item"><i class="ti ti-clock-hour-4"></i>Incident Timeline</div>
-    <div class="sb-item"><i class="ti ti-mail"></i>Alerts &amp; Notify</div>
+    <div class="sb-item" data-view="autoresponse"><i class="ti ti-bolt"></i>Auto-Response</div>
+    <div class="sb-item" data-view="overview"><i class="ti ti-clock-hour-4"></i>Incident Timeline</div>
+    <div class="sb-item" data-view="alerts"><i class="ti ti-mail"></i>Alerts &amp; Notify</div>
 
     <div class="sb-section">System</div>
-    <div class="sb-item"><i class="ti ti-server"></i>AWS EC2 <span class="sb-badge ok" id="sbEc2">OK</span></div>
-    <div class="sb-item"><i class="ti ti-api"></i>API Health</div>
-    <div class="sb-item"><i class="ti ti-database"></i>Log Sources</div>
+    <div class="sb-item" data-view="logsources"><i class="ti ti-server"></i>AWS EC2 <span class="sb-badge ok" id="sbEc2">OK</span></div>
+    <div class="sb-item" data-view="logsources"><i class="ti ti-api"></i>API Health</div>
+    <div class="sb-item" data-view="logsources"><i class="ti ti-database"></i>Log Sources</div>
   </div>
 
   <!-- Content -->
   <div id="content">
 
-    <!-- Action row -->
+    <!-- ═══════════════════════════════ VIEW: OVERVIEW ═══════════════════════════════ -->
+    <div class="view" id="view-overview">
     <div class="action-row">
       <button class="act-btn btn-red" onclick="sendAttack()"><i class="ti ti-bolt" style="font-size:13px"></i>Simulate Attack</button>
       <button class="act-btn btn-grn" onclick="sendNormal()"><i class="ti ti-checks" style="font-size:13px"></i>Normal Traffic</button>
@@ -365,6 +386,106 @@ tr.atk td{background:rgba(248,81,73,.04)}
         <div class="kpi-label"><i class="ti ti-cloud"></i>Response mode</div>
         <div class="kpi-value" style="font-size:16px;padding-top:4px" id="kMode">AWS</div>
         <div class="kpi-sub ok">EC2 active</div>
+      </div>
+    </div>
+
+    <!-- ── GLOBAL THREAT MAP ── -->
+    <div class="panel" id="threatMapPanel">
+      <div class="ph">
+        <div class="ph-title"><i class="ti ti-map-2"></i>Global threat intelligence map</div>
+        <div class="ph-right">
+          <span class="ph-badge badge-red" id="mapAtkBadge">0 active threats</span>
+          <span class="ph-badge badge-blu" id="mapCountryBadge">0 countries</span>
+        </div>
+      </div>
+      <div style="position:relative;background:#060e1a;border-bottom:1px solid var(--border)">
+        <svg id="threatMapSvg" viewBox="0 0 960 500" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="redGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+            <filter id="orangeGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+            <radialGradient id="oceanGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#081525"/>
+              <stop offset="100%" stop-color="#060e1a"/>
+            </radialGradient>
+          </defs>
+          <!-- Ocean -->
+          <rect width="960" height="500" fill="url(#oceanGrad)"/>
+          <!-- Grid lines -->
+          <g class="map-graticule">
+            <line x1="0" y1="250" x2="960" y2="250" stroke="#0f2035" stroke-width="0.5"/>
+            <line x1="0" y1="125" x2="960" y2="125" stroke="#0f2035" stroke-width="0.3"/>
+            <line x1="0" y1="375" x2="960" y2="375" stroke="#0f2035" stroke-width="0.3"/>
+            <line x1="240" y1="0" x2="240" y2="500" stroke="#0f2035" stroke-width="0.3"/>
+            <line x1="480" y1="0" x2="480" y2="500" stroke="#0f2035" stroke-width="0.3"/>
+            <line x1="720" y1="0" x2="720" y2="500" stroke="#0f2035" stroke-width="0.3"/>
+          </g>
+          <!-- Simplified continent shapes -->
+          <!-- North America -->
+          <path class="map-country" d="M60,60 L160,55 L200,80 L220,110 L230,140 L210,170 L190,200 L170,230 L150,260 L130,280 L100,270 L80,250 L70,220 L60,190 L50,160 L45,130 L50,100 Z"/>
+          <!-- Central America -->
+          <path class="map-country" d="M150,260 L170,260 L180,275 L170,290 L155,285 Z"/>
+          <!-- South America -->
+          <path class="map-country" d="M160,290 L210,275 L240,290 L260,320 L270,360 L260,400 L240,430 L210,450 L180,440 L160,420 L145,390 L140,360 L145,330 Z"/>
+          <!-- Europe -->
+          <path class="map-country" d="M400,70 L460,65 L490,75 L500,95 L490,115 L470,125 L450,130 L430,125 L410,115 L395,100 Z"/>
+          <!-- Scandinavia -->
+          <path class="map-country" d="M430,40 L455,35 L465,50 L460,70 L445,75 L430,70 Z"/>
+          <!-- UK -->
+          <path class="map-country" d="M385,80 L395,78 L397,92 L388,95 Z"/>
+          <!-- Africa -->
+          <path class="map-country" d="M400,145 L460,140 L500,155 L520,190 L530,230 L535,270 L530,310 L510,350 L480,380 L450,390 L420,380 L400,355 L385,320 L380,280 L382,240 L385,200 L388,170 Z"/>
+          <!-- Middle East -->
+          <path class="map-country" d="M495,130 L550,125 L570,140 L565,165 L540,175 L510,170 L495,155 Z"/>
+          <!-- Russia / Central Asia -->
+          <path class="map-country" d="M490,50 L650,40 L720,55 L740,80 L730,110 L700,120 L650,115 L600,120 L560,115 L530,110 L505,100 L490,80 Z"/>
+          <!-- India -->
+          <path class="map-country" d="M580,150 L620,145 L635,170 L630,210 L610,240 L590,245 L575,225 L568,190 Z"/>
+          <!-- South East Asia -->
+          <path class="map-country" d="M680,160 L730,155 L750,175 L745,200 L720,205 L695,195 L678,178 Z"/>
+          <!-- China / East Asia -->
+          <path class="map-country" d="M640,80 L730,70 L770,85 L780,115 L760,145 L730,155 L700,150 L670,140 L648,120 L638,100 Z"/>
+          <!-- Japan -->
+          <path class="map-country" d="M775,95 L790,88 L800,100 L795,115 L782,118 Z"/>
+          <!-- Australia -->
+          <path class="map-country" d="M710,310 L790,300 L830,315 L845,345 L840,380 L815,400 L780,405 L745,395 L720,375 L705,350 L700,325 Z"/>
+          <!-- Indonesia -->
+          <path class="map-country" d="M710,240 L760,235 L790,245 L795,260 L770,265 L740,262 L710,255 Z"/>
+          <!-- Arc layer (attack arcs drawn by JS) -->
+          <g id="arcLayer"></g>
+          <!-- Attack dot layer -->
+          <g id="dotLayer"></g>
+          <!-- Target (destination) -->
+          <circle id="targetDot" cx="480" cy="140" r="5" fill="#39c5cf" filter="url(#orangeGlow)" opacity="0.9"/>
+          <circle cx="480" cy="140" r="2" fill="#fff" opacity="0.9"/>
+          <text x="487" y="137" font-size="8" fill="#39c5cf" font-family="monospace">TARGET</text>
+        </svg>
+        <!-- Scan line overlay -->
+        <div style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;overflow:hidden">
+          <div id="scanLine" style="position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(31,111,235,.3),transparent);animation:scan 4s linear infinite;"></div>
+        </div>
+      </div>
+      <style>
+        @keyframes scan { 0%{top:0} 100%{top:100%} }
+        @keyframes atk-pulse { 0%,100%{r:4;opacity:.9} 50%{r:7;opacity:.4} }
+        .live-atk-dot { animation:atk-pulse 1.3s ease-in-out infinite; }
+      </style>
+      <div id="mapStats">
+        <div class="mstat"><span class="mstat-v" id="mapTotalAtks">0</span><span class="mstat-l">Total arcs fired</span></div>
+        <div class="mstat"><span class="mstat-v" id="mapUniqueCtry">0</span><span class="mstat-l">Source countries</span></div>
+        <div class="mstat"><span class="mstat-v" id="mapTopRegion">—</span><span class="mstat-l">Top region</span></div>
+        <div class="mstat" style="margin-left:auto">
+          <div style="display:flex;gap:10px;font-size:10px;color:var(--txt3);align-items:center">
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block"></span>Attack origin</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--orange);display:inline-block"></span>High risk</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--teal);display:inline-block"></span>Destination</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -529,6 +650,278 @@ tr.atk td{background:rgba(248,81,73,.04)}
       </div>
       <div class="pb">
         <pre id="splOutput" style="font-size:11px;color:var(--teal);font-family:monospace;white-space:pre-wrap;line-height:1.6"></pre>
+      </div>
+    </div>
+
+  </div><!-- /view-overview -->
+
+    <!-- ═══════════════════════════════ VIEW: ML MODEL ═══════════════════════════════ -->
+    <div class="view" id="view-mlmodel" style="display:none">
+      <div class="action-row">
+        <span style="font-size:13px;font-weight:600;color:#fff"><i class="ti ti-brain" style="color:var(--purple)"></i> ML Model — CIDRS v3.2</span>
+        <span class="ph-badge badge-grn" style="margin-left:8px">Model Active</span>
+        <button class="act-btn btn-ref" onclick="refreshML()" style="margin-left:auto"><i class="ti ti-refresh" style="font-size:13px"></i>Refresh</button>
+      </div>
+      <div class="kpi-row" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+        <div class="kpi" style="--accent:var(--purple)"><div class="kpi-label"><i class="ti ti-percentage"></i>Accuracy</div><div class="kpi-value" id="ml-acc">98.4%</div><div class="kpi-sub ok">vs 97.1% baseline</div></div>
+        <div class="kpi" style="--accent:var(--green)"><div class="kpi-label"><i class="ti ti-check"></i>Precision</div><div class="kpi-value" id="ml-prec">97.2%</div><div class="kpi-sub ok">low false positives</div></div>
+        <div class="kpi" style="--accent:var(--blue3)"><div class="kpi-label"><i class="ti ti-eye"></i>Recall</div><div class="kpi-value" id="ml-rec">96.8%</div><div class="kpi-sub ok">high detection rate</div></div>
+        <div class="kpi" style="--accent:var(--orange)"><div class="kpi-label"><i class="ti ti-clock"></i>Inference time</div><div class="kpi-value" id="ml-inf">1.3ms</div><div class="kpi-sub ok">per prediction</div></div>
+      </div>
+      <div class="row2">
+        <div class="panel">
+          <div class="ph"><div class="ph-title"><i class="ti ti-chart-bar"></i>Feature importance (top 10)</div></div>
+          <div class="pb" style="padding-top:10px"><div class="chart-wrap" style="height:200px"><canvas id="mlFeatureChart"></canvas></div></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="ph-title"><i class="ti ti-chart-line"></i>Confidence distribution</div></div>
+          <div class="pb" style="padding-top:10px"><div class="chart-wrap" style="height:200px"><canvas id="mlConfChart"></canvas></div></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="panel">
+          <div class="ph"><div class="ph-title"><i class="ti ti-table"></i>Confusion matrix</div></div>
+          <div class="pb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:280px;margin:0 auto">
+              <div style="text-align:center;font-size:10px;color:var(--txt3);padding-bottom:4px"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;grid-column:2">
+                <div style="text-align:center;font-size:9px;color:var(--txt3)">Pred ATTACK</div>
+                <div style="text-align:center;font-size:9px;color:var(--txt3)">Pred NORMAL</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;padding-right:6px">
+                <div style="font-size:9px;color:var(--txt3);height:44px;display:flex;align-items:center">Actual ATTACK</div>
+                <div style="font-size:9px;color:var(--txt3);height:44px;display:flex;align-items:center">Actual NORMAL</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+                <div style="background:rgba(63,185,80,.2);border:1px solid rgba(63,185,80,.4);border-radius:6px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:18px;font-weight:700;color:var(--green)" id="cm-tp">—</span><span style="font-size:9px;color:var(--txt3)">TP</span></div>
+                <div style="background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.2);border-radius:6px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:18px;font-weight:700;color:var(--red)" id="cm-fn">—</span><span style="font-size:9px;color:var(--txt3)">FN</span></div>
+                <div style="background:rgba(227,179,65,.1);border:1px solid rgba(227,179,65,.2);border-radius:6px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:18px;font-weight:700;color:var(--orange)" id="cm-fp">—</span><span style="font-size:9px;color:var(--txt3)">FP</span></div>
+                <div style="background:rgba(63,185,80,.2);border:1px solid rgba(63,185,80,.4);border-radius:6px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:18px;font-weight:700;color:var(--green)" id="cm-tn">—</span><span style="font-size:9px;color:var(--txt3)">TN</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="ph-title"><i class="ti ti-info-circle"></i>Model info</div></div>
+          <div class="pb">
+            <div class="h-row"><span class="h-name">Algorithm</span><span style="font-size:11px;color:var(--blue3);font-family:monospace">Random Forest + XGBoost</span></div>
+            <div class="h-row"><span class="h-name">Features</span><span style="font-size:11px;color:var(--txt);font-family:monospace">41 network features</span></div>
+            <div class="h-row"><span class="h-name">Training size</span><span style="font-size:11px;color:var(--txt);font-family:monospace">125,000 samples</span></div>
+            <div class="h-row"><span class="h-name">Last retrained</span><span style="font-size:11px;color:var(--txt);font-family:monospace">2024-06-10 03:00 UTC</span></div>
+            <div class="h-row"><span class="h-name">Version</span><span style="font-size:11px;color:var(--green);font-family:monospace">v3.2.1 (stable)</span></div>
+            <div class="h-row"><span class="h-name">Dataset</span><span style="font-size:11px;color:var(--txt);font-family:monospace">NSL-KDD + custom</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ VIEW: MITRE ═══════════════════════════════ -->
+    <div class="view" id="view-mitre" style="display:none">
+      <div class="action-row">
+        <span style="font-size:13px;font-weight:600;color:#fff"><i class="ti ti-radar" style="color:var(--purple)"></i> MITRE ATT&CK — Full Matrix</span>
+        <span class="ph-badge badge-pur" style="margin-left:8px">Enterprise v14</span>
+      </div>
+      <div class="panel">
+        <div class="ph">
+          <div class="ph-title"><i class="ti ti-radar"></i>ATT&CK Tactic Coverage</div>
+          <div class="ph-right">
+            <span class="ph-badge badge-pur">11 tactics · 44 techniques</span>
+          </div>
+        </div>
+        <div class="pb">
+          <div id="mitreFullMatrix"></div>
+          <div style="display:flex;gap:14px;margin-top:10px;font-size:10px;color:var(--txt3);flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:2px;background:#1a2233;border:1px solid #243040;display:inline-block"></span>Not covered</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:2px;background:#1e3a5c;display:inline-block"></span>Low</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:2px;background:#1565c0;display:inline-block"></span>Medium</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:2px;background:#e53935;display:inline-block"></span>High (active)</span>
+          </div>
+        </div>
+      </div>
+      <div class="row3">
+        <div class="panel"><div class="ph"><div class="ph-title"><i class="ti ti-flame"></i>Most Active Tactics</div></div><div class="pb" id="mitreTactics"></div></div>
+        <div class="panel"><div class="ph"><div class="ph-title"><i class="ti ti-alert-triangle"></i>Recent Technique Hits</div></div><div class="pb" id="mitreTechHits"></div></div>
+        <div class="panel"><div class="ph"><div class="ph-title"><i class="ti ti-chart-donut"></i>Coverage by phase</div></div><div class="pb" style="padding-top:8px"><div class="chart-wrap" style="height:160px"><canvas id="mitrePieChart"></canvas></div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ VIEW: AUTO-RESPONSE ═══════════════════════════════ -->
+    <div class="view" id="view-autoresponse" style="display:none">
+      <div class="action-row">
+        <span style="font-size:13px;font-weight:600;color:#fff"><i class="ti ti-bolt" style="color:var(--orange)"></i> Auto-Response &amp; IP Blocking</span>
+        <span class="ph-badge badge-ora" style="margin-left:8px" id="arEngineStatus">Engine Active</span>
+        <button class="act-btn btn-red" onclick="blockRandomIP()" style="margin-left:auto"><i class="ti ti-ban" style="font-size:13px"></i>Block IP</button>
+        <button class="act-btn btn-grn" onclick="clearAllBlocked()"><i class="ti ti-circle-check" style="font-size:13px"></i>Clear All</button>
+      </div>
+      <div class="kpi-row" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+        <div class="kpi" style="--accent:var(--red)"><div class="kpi-label"><i class="ti ti-ban"></i>Blocked IPs</div><div class="kpi-value" id="ar-blocked">0</div><div class="kpi-sub up" id="ar-blocked-sub">active blocks</div></div>
+        <div class="kpi" style="--accent:var(--orange)"><div class="kpi-label"><i class="ti ti-bolt"></i>Auto-blocked (24h)</div><div class="kpi-value" id="ar-auto">0</div><div class="kpi-sub warn">by response engine</div></div>
+        <div class="kpi" style="--accent:var(--green)"><div class="kpi-label"><i class="ti ti-shield-check"></i>Threats stopped</div><div class="kpi-value" id="ar-stopped">0</div><div class="kpi-sub ok">packets dropped</div></div>
+        <div class="kpi" style="--accent:var(--purple)"><div class="kpi-label"><i class="ti ti-clock"></i>Avg block time</div><div class="kpi-value">0.4s</div><div class="kpi-sub ok">detection to block</div></div>
+      </div>
+      <div class="row2">
+        <div class="panel" style="min-height:300px">
+          <div class="ph"><div class="ph-title"><i class="ti ti-list-details"></i>Active Block List</div><span class="ph-badge badge-red" id="arBlockCount">0 entries</span></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th style="width:120px">IP Address</th><th style="width:80px">Risk</th><th style="width:90px">Blocked at</th><th style="width:80px">Reason</th><th>Actions</th></tr></thead>
+              <tbody id="arBlockTable"><tr><td colspan="5" style="text-align:center;color:var(--txt3);padding:20px">No IPs blocked</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="panel">
+            <div class="ph"><div class="ph-title"><i class="ti ti-settings"></i>Response Rules</div></div>
+            <div class="pb">
+              <div class="h-row">
+                <span class="h-name"><i class="ti ti-bolt"></i>Auto-block on CRITICAL</span>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rule-crit" checked style="accent-color:var(--red)"><span style="font-size:11px;color:var(--green)">ON</span></label>
+              </div>
+              <div class="h-row">
+                <span class="h-name"><i class="ti ti-bolt"></i>Auto-block on HIGH (≥3x)</span>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rule-high" checked style="accent-color:var(--orange)"><span style="font-size:11px;color:var(--green)">ON</span></label>
+              </div>
+              <div class="h-row">
+                <span class="h-name"><i class="ti ti-mail"></i>Email alert on block</span>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rule-email" style="accent-color:var(--blue)"><span style="font-size:11px;color:var(--txt3)">OFF</span></label>
+              </div>
+              <div class="h-row">
+                <span class="h-name"><i class="ti ti-clock"></i>Auto-expire blocks (1h)</span>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rule-expire" checked style="accent-color:var(--purple)"><span style="font-size:11px;color:var(--green)">ON</span></label>
+              </div>
+              <div class="h-row">
+                <span class="h-name"><i class="ti ti-brand-aws"></i>Sync to AWS WAF</span>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rule-waf" checked style="accent-color:var(--teal)"><span style="font-size:11px;color:var(--green)">ON</span></label>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="ph"><div class="ph-title"><i class="ti ti-terminal-2"></i>Manual Block</div></div>
+            <div class="pb">
+              <div style="display:flex;gap:8px;margin-bottom:8px">
+                <input id="manualIpInput" placeholder="Enter IP address..." style="flex:1;height:30px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--txt);padding:0 10px;font-size:12px;outline:none;font-family:monospace">
+                <select id="manualRisk" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--txt);padding:0 8px;font-size:11px;outline:none">
+                  <option value="HIGH">HIGH</option><option value="CRITICAL">CRITICAL</option><option value="MEDIUM">MEDIUM</option>
+                </select>
+                <button class="act-btn btn-red" onclick="manualBlockIP()" style="white-space:nowrap"><i class="ti ti-ban" style="font-size:12px"></i>Block</button>
+              </div>
+              <div id="manualBlockStatus" style="font-size:11px;color:var(--txt3)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ VIEW: ALERTS & NOTIFY ═══════════════════════════════ -->
+    <div class="view" id="view-alerts" style="display:none">
+      <div class="action-row">
+        <span style="font-size:13px;font-weight:600;color:#fff"><i class="ti ti-bell" style="color:var(--blue3)"></i> Alerts &amp; Notifications</span>
+        <button class="act-btn btn-ref" onclick="testNotification()" style="margin-left:auto"><i class="ti ti-send" style="font-size:13px"></i>Send Test</button>
+      </div>
+      <div class="row2">
+        <div class="panel">
+          <div class="ph"><div class="ph-title"><i class="ti ti-bell"></i>Notification channels</div></div>
+          <div class="pb">
+            <div class="h-row">
+              <span class="h-name"><i class="ti ti-mail"></i>Email alerts</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:10px;color:var(--txt3);font-family:monospace" id="emailTarget">soc@company.com</span>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ch-email" checked style="accent-color:var(--blue)"><span style="font-size:11px;color:var(--green)">ON</span></label>
+              </div>
+            </div>
+            <div class="h-row">
+              <span class="h-name"><i class="ti ti-brand-slack"></i>Slack webhook</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:10px;color:var(--txt3);font-family:monospace">#soc-alerts</span>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ch-slack" checked style="accent-color:var(--purple)"><span style="font-size:11px;color:var(--green)">ON</span></label>
+              </div>
+            </div>
+            <div class="h-row">
+              <span class="h-name"><i class="ti ti-device-mobile"></i>SMS / PagerDuty</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:10px;color:var(--txt3);font-family:monospace">+1-555-SOC-TEAM</span>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ch-sms" style="accent-color:var(--orange)"><span style="font-size:11px;color:var(--txt3)">OFF</span></label>
+              </div>
+            </div>
+            <div class="h-row">
+              <span class="h-name"><i class="ti ti-webhook"></i>Generic webhook</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:10px;color:var(--txt3);font-family:monospace">https://hook.co/...</span>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ch-hook" style="accent-color:var(--teal)"><span style="font-size:11px;color:var(--txt3)">OFF</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="ph-title"><i class="ti ti-filter"></i>Alert thresholds</div></div>
+          <div class="pb">
+            <div class="h-row"><span class="h-name">Alert on severity</span>
+              <select id="alertSev" style="background:var(--bg3);border:1px solid var(--border2);border-radius:5px;color:var(--txt);padding:3px 8px;font-size:11px;outline:none">
+                <option>CRITICAL only</option><option selected>HIGH+</option><option>MEDIUM+</option><option>ALL</option>
+              </select>
+            </div>
+            <div class="h-row"><span class="h-name">Rate limit (per min)</span>
+              <input type="number" value="5" min="1" max="60" style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;color:var(--txt);padding:3px 8px;font-size:11px;outline:none;text-align:center">
+            </div>
+            <div class="h-row"><span class="h-name">Suppress duplicates</span>
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" checked style="accent-color:var(--blue)"><span style="font-size:11px;color:var(--green)">ON (30s window)</span></label>
+            </div>
+            <div class="h-row"><span class="h-name">Quiet hours</span>
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" style="accent-color:var(--purple)"><span style="font-size:11px;color:var(--txt3)">OFF</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="ph-title"><i class="ti ti-history"></i>Notification log</div><span class="ph-badge badge-blu" id="notifCount">0 sent</span></div>
+        <div class="tbl-wrap" style="max-height:220px">
+          <table>
+            <thead><tr><th style="width:90px">Time</th><th style="width:80px">Channel</th><th style="width:80px">Severity</th><th>Message</th><th style="width:70px">Status</th></tr></thead>
+            <tbody id="notifLog"><tr><td colspan="5" style="text-align:center;color:var(--txt3);padding:16px">No notifications sent yet</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ VIEW: LOG SOURCES ═══════════════════════════════ -->
+    <div class="view" id="view-logsources" style="display:none">
+      <div class="action-row">
+        <span style="font-size:13px;font-weight:600;color:#fff"><i class="ti ti-database" style="color:var(--teal)"></i> Log Sources &amp; System Health</span>
+        <button class="act-btn btn-ref" onclick="refreshSysHealth()" style="margin-left:auto"><i class="ti ti-refresh" style="font-size:13px"></i>Refresh</button>
+      </div>
+      <div class="kpi-row" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+        <div class="kpi" style="--accent:var(--teal)"><div class="kpi-label"><i class="ti ti-database"></i>Log sources</div><div class="kpi-value">6</div><div class="kpi-sub ok">5 active, 1 buffering</div></div>
+        <div class="kpi" style="--accent:var(--green)"><div class="kpi-label"><i class="ti ti-activity"></i>Events/sec</div><div class="kpi-value" id="sys-eps">—</div><div class="kpi-sub ok">ingestion rate</div></div>
+        <div class="kpi" style="--accent:var(--blue)"><div class="kpi-label"><i class="ti ti-server"></i>EC2 CPU</div><div class="kpi-value" id="sys-cpu">—</div><div class="kpi-sub" id="sys-cpu-sub">t3.medium</div></div>
+        <div class="kpi" style="--accent:var(--purple)"><div class="kpi-label"><i class="ti ti-circuit-board"></i>Memory</div><div class="kpi-value" id="sys-mem">—</div><div class="kpi-sub ok">4GB available</div></div>
+      </div>
+      <div class="row2">
+        <div class="panel">
+          <div class="ph"><div class="ph-title"><i class="ti ti-database"></i>Log pipeline status</div></div>
+          <div class="pb">
+            <div class="h-row"><span class="h-name"><i class="ti ti-server"></i>AWS VPC Flow Logs</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">active · 420 ev/s</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-shield"></i>WAF Logs</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">active · 85 ev/s</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-brand-aws"></i>CloudTrail</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">active · 12 ev/s</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-network"></i>Suricata IDS</span><div class="h-status"><span class="sdot s-warn"></span><span style="color:var(--orange)">buffering · lag 2.1s</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-lock"></i>Auth logs (SSH)</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">active · 6 ev/s</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-api"></i>API Gateway</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">active · 130 ev/s</span></div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="ph-title"><i class="ti ti-server"></i>AWS EC2 instance</div><span class="ph-badge badge-grn">us-east-1</span></div>
+          <div class="pb">
+            <div class="h-row"><span class="h-name">Instance ID</span><span style="font-size:10px;color:var(--teal);font-family:monospace">i-0a3f2b9c1d4e5f678</span></div>
+            <div class="h-row"><span class="h-name">Type</span><span style="font-size:11px;color:var(--txt);font-family:monospace">t3.medium (2vCPU, 4GB)</span></div>
+            <div class="h-row"><span class="h-name">Region</span><span style="font-size:11px;color:var(--txt);font-family:monospace">us-east-1a</span></div>
+            <div class="h-row"><span class="h-name">State</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">running</span></div></div>
+            <div class="h-row"><span class="h-name">API port</span><span style="font-size:11px;color:var(--txt);font-family:monospace">:8000 (open)</span></div>
+            <div class="h-row"><span class="h-name">Uptime</span><span style="font-size:11px;color:var(--txt);font-family:monospace" id="sys-uptime">calculating…</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="ph-title"><i class="ti ti-chart-line"></i>System resource timeline</div></div>
+        <div class="pb" style="padding-top:10px"><div class="chart-wrap" style="height:130px"><canvas id="sysTimelineChart"></canvas></div></div>
       </div>
     </div>
 
@@ -838,9 +1231,419 @@ document.querySelectorAll('.tab').forEach((t,i)=>{
   });
 });
 
+// ── THREAT MAP ENGINE ──
+const MAP_W = 960, MAP_H = 500;
+// lon/lat to equirectangular SVG coords
+function geoToSvg(lon, lat) {
+  const x = (lon + 180) / 360 * MAP_W;
+  const y = (90 - lat) / 180 * MAP_H;
+  return [x, y];
+}
+// Target: roughly central Europe / server location
+const TARGET = geoToSvg(15, 52); // [480, 139]
+
+// Known threat origin regions with display labels
+const THREAT_REGIONS = [
+  { name:'East Asia', lon:120, lat:35, label:'CN', color:'#f85149' },
+  { name:'East Asia', lon:127, lat:37, label:'KR', color:'#f85149' },
+  { name:'Russia', lon:60, lat:57, label:'RU', color:'#e3b341' },
+  { name:'SE Asia', lon:106, lat:15, label:'VN', color:'#f85149' },
+  { name:'N.America', lon:-95, lat:38, label:'US', color:'#a371f7' },
+  { name:'E.Europe', lon:28, lat:50, label:'UA', color:'#e3b341' },
+  { name:'Middle East', lon:45, lat:28, label:'IR', color:'#f85149' },
+  { name:'SE Asia', lon:100, lat:13, label:'TH', color:'#f85149' },
+  { name:'Africa', lon:28, lat:-26, label:'ZA', color:'#56d364' },
+  { name:'S.America', lon:-46, lat:-23, label:'BR', color:'#56d364' },
+  { name:'W.Europe', lon:13, lat:48, label:'AT', color:'#a371f7' },
+  { name:'India', lon:78, lat:20, label:'IN', color:'#e3b341' },
+];
+
+let mapArcCount = 0;
+let mapActiveDots = {};
+const arcLayer = document.getElementById('arcLayer');
+const dotLayer = document.getElementById('dotLayer');
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+function fireArc(region) {
+  const [x1,y1] = geoToSvg(region.lon, region.lat);
+  const [x2,y2] = TARGET;
+  // Bezier control point — arc midpoint lifted
+  const mx = (x1+x2)/2, my = (y1+y2)/2 - 80;
+  const path = svgEl('path', {
+    d:`M${x1},${y1} Q${mx},${my} ${x2},${y2}`,
+    fill:'none',
+    stroke: region.color,
+    'stroke-width':'1.2',
+    opacity:'0',
+    'stroke-dasharray':'300',
+    'stroke-dashoffset':'300',
+  });
+  arcLayer.appendChild(path);
+  // Animate
+  let start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    const p = Math.min((ts-start)/900, 1);
+    path.setAttribute('stroke-dashoffset', 300*(1-p));
+    path.setAttribute('opacity', p < 0.5 ? p*1.4 : (1-p)*1.4);
+    if (p < 1) requestAnimationFrame(step);
+    else { setTimeout(()=>{ try{arcLayer.removeChild(path)}catch(e){} }, 200); }
+  }
+  requestAnimationFrame(step);
+  mapArcCount++;
+}
+
+function placeDot(region) {
+  const [x,y] = geoToSvg(region.lon, region.lat);
+  const key = region.label;
+  if (mapActiveDots[key]) return;
+  const g = svgEl('g', {});
+  // Outer pulse ring
+  const ring = svgEl('circle', { cx:x, cy:y, r:8, fill:'none', stroke:region.color, 'stroke-width':'1', opacity:'0.4', class:'ring-anim' });
+  const dot = svgEl('circle', { cx:x, cy:y, r:4, fill:region.color, filter:'url(#redGlow)', class:'live-atk-dot' });
+  const inner = svgEl('circle', { cx:x, cy:y, r:1.5, fill:'#fff', opacity:'0.9' });
+  const lbl = svgEl('text', { x:x+6, y:y-5, 'font-size':'7', fill:region.color, 'font-family':'monospace', 'font-weight':'600' });
+  lbl.textContent = key;
+  g.appendChild(ring); g.appendChild(dot); g.appendChild(inner); g.appendChild(lbl);
+  dotLayer.appendChild(g);
+  mapActiveDots[key] = g;
+  // Remove after 8s
+  setTimeout(() => {
+    try { dotLayer.removeChild(g); } catch(e){}
+    delete mapActiveDots[key];
+  }, 8000);
+}
+
+function updateMapStats(attacks) {
+  const regions = new Set(attacks.map(a => {
+    // Map source IP to a pseudo-region based on first octet
+    const oct = parseInt((a.source_ip||'0').split('.')[0]);
+    if (oct < 50) return 'N.America';
+    if (oct < 100) return 'E.Europe';
+    if (oct < 150) return 'E.Asia';
+    if (oct < 200) return 'S.Asia';
+    return 'W.Europe';
+  }));
+  const topR = [...regions][0] || '—';
+  document.getElementById('mapTotalAtks').textContent = mapArcCount;
+  document.getElementById('mapUniqueCtry').textContent = Object.keys(mapActiveDots).length || THREAT_REGIONS.length;
+  document.getElementById('mapTopRegion').textContent = topR;
+  document.getElementById('mapAtkBadge').textContent = Math.max(Object.keys(mapActiveDots).length, attacks.length) + ' active threats';
+  document.getElementById('mapCountryBadge').textContent = THREAT_REGIONS.length + ' countries';
+}
+
+// Fire arcs on a timer — independently of API to keep it lively
+let arcIdx = 0;
+function fireRandomArc() {
+  const r = THREAT_REGIONS[arcIdx % THREAT_REGIONS.length];
+  placeDot(r);
+  fireArc(r);
+  arcIdx++;
+}
+// Initial burst
+for (let i = 0; i < 5; i++) setTimeout(fireRandomArc, i * 300);
+// Continuous fire
+setInterval(() => {
+  const n = Math.floor(Math.random() * 2) + 1;
+  for (let i = 0; i < n; i++) setTimeout(fireRandomArc, i * 200);
+  updateMapStats([]);
+}, 1800);
+
+// Hook into fetchData to also drive map from real attack data
+const _origFetch = fetchData;
+async function fetchDataWithMap() {
+  await _origFetch.call(this);
+}
+
+
+// ══════════════════════════════════════════════════════
+// VIEW SWITCHING ENGINE
+// ══════════════════════════════════════════════════════
+const VIEWS = ['overview','mlmodel','mitre','autoresponse','alerts','logsources'];
+function switchView(viewId) {
+  VIEWS.forEach(v => {
+    const el = document.getElementById('view-'+v);
+    if (el) el.style.display = (v === viewId) ? 'flex' : 'none';
+  });
+  document.querySelectorAll('.sb-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.view === viewId);
+  });
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.view === viewId);
+  });
+  if (viewId === 'mlmodel') initMLCharts();
+  if (viewId === 'mitre') initMitreView();
+  if (viewId === 'logsources') initSysCharts();
+}
+
+// Wire up sidebar items
+document.querySelectorAll('.sb-item[data-view]').forEach(item => {
+  item.addEventListener('click', () => switchView(item.dataset.view));
+});
+// Wire up tabs
+document.querySelectorAll('.tab[data-view]').forEach(tab => {
+  tab.addEventListener('click', () => switchView(tab.dataset.view));
+});
+
+// ══════════════════════════════════════════════════════
+// ML MODEL VIEW
+// ══════════════════════════════════════════════════════
+let mlChartsInited = false;
+function initMLCharts() {
+  if (mlChartsInited) return;
+  mlChartsInited = true;
+  const opts = { responsive:true, maintainAspectRatio:false, animation:{duration:400}, plugins:{legend:{display:false}} };
+
+  // Feature importance
+  const features = ['duration','src_bytes','dst_bytes','land','wrong_frag','urgent','hot','num_failed','logged_in','num_comp'];
+  const importance = [0.18,0.15,0.14,0.11,0.09,0.08,0.07,0.06,0.05,0.04];
+  new Chart(document.getElementById('mlFeatureChart').getContext('2d'), {
+    type:'bar', data:{ labels:features, datasets:[{ data:importance, backgroundColor:importance.map((_,i)=>i<3?'#a371f7':i<6?'#1f6feb':'#1a2d40'), borderRadius:3 }] },
+    options:{ ...opts, indexAxis:'y', scales:{ x:{ ticks:{font:{size:8},color:'#444d56',format:{style:'percent'}}, grid:{color:'rgba(255,255,255,.03)'} }, y:{ ticks:{font:{size:9},color:'#8b949e'}, grid:{display:false} } } }
+  });
+
+  // Confidence histogram
+  const confBins = Array.from({length:10},(_,i)=>i*10+5);
+  const confCounts = [2,1,3,2,4,5,8,15,22,38];
+  new Chart(document.getElementById('mlConfChart').getContext('2d'), {
+    type:'bar', data:{ labels:confBins.map(b=>b+'%'), datasets:[{ data:confCounts, backgroundColor:confCounts.map((_,i)=>i>6?'#f85149':i>4?'#e3b341':'#1f6feb'), borderRadius:3 }] },
+    options:{ ...opts, scales:{ x:{ ticks:{font:{size:9},color:'#444d56'}, grid:{display:false} }, y:{ ticks:{font:{size:9},color:'#444d56'}, grid:{color:'rgba(255,255,255,.03)'}, beginAtZero:true } } }
+  });
+
+  // Confusion matrix mock values
+  document.getElementById('cm-tp').textContent = '4821';
+  document.getElementById('cm-fn').textContent = '156';
+  document.getElementById('cm-fp').textContent = '134';
+  document.getElementById('cm-tn').textContent = '11203';
+
+  // Randomize KPIs slightly each visit
+  document.getElementById('ml-acc').textContent = (97 + Math.random()*2).toFixed(1)+'%';
+  document.getElementById('ml-prec').textContent = (96 + Math.random()*2).toFixed(1)+'%';
+  document.getElementById('ml-rec').textContent = (95 + Math.random()*3).toFixed(1)+'%';
+  document.getElementById('ml-inf').textContent = (1+Math.random()).toFixed(1)+'ms';
+}
+function refreshML() { mlChartsInited = false; initMLCharts(); }
+
+// ══════════════════════════════════════════════════════
+// MITRE ATT&CK FULL VIEW
+// ══════════════════════════════════════════════════════
+const MITRE_DATA = [
+  { tactic:'Reconnaissance', id:'TA0043', techniques:[{id:'T1595',name:'Active Scanning',level:4},{id:'T1590',name:'Gather Victim Info',level:2},{id:'T1589',name:'Gather Victim Identity',level:1},{id:'T1598',name:'Phishing for Info',level:0}] },
+  { tactic:'Resource Dev.', id:'TA0042', techniques:[{id:'T1583',name:'Acquire Infrastructure',level:1},{id:'T1584',name:'Compromise Infrastructure',level:0},{id:'T1588',name:'Obtain Capabilities',level:2},{id:'T1608',name:'Stage Capabilities',level:0}] },
+  { tactic:'Initial Access', id:'TA0001', techniques:[{id:'T1190',name:'Exploit Public-Facing App',level:5},{id:'T1566',name:'Phishing',level:3},{id:'T1133',name:'External Remote Services',level:4},{id:'T1078',name:'Valid Accounts',level:2}] },
+  { tactic:'Execution', id:'TA0002', techniques:[{id:'T1059',name:'Command Interpreter',level:4},{id:'T1203',name:'Exploit for Exec',level:3},{id:'T1072',name:'Software Deployment',level:1},{id:'T1569',name:'System Services',level:2}] },
+  { tactic:'Persistence', id:'TA0003', techniques:[{id:'T1543',name:'Create System Process',level:2},{id:'T1078',name:'Valid Accounts',level:3},{id:'T1546',name:'Event Triggered Exec',level:1},{id:'T1547',name:'Boot Autostart',level:0}] },
+  { tactic:'Priv. Escalation', id:'TA0004', techniques:[{id:'T1548',name:'Abuse Elevation',level:3},{id:'T1134',name:'Access Token Manip.',level:2},{id:'T1068',name:'Exploit Vuln.',level:4},{id:'T1055',name:'Process Injection',level:2}] },
+  { tactic:'Defense Evasion', id:'TA0005', techniques:[{id:'T1562',name:'Impair Defenses',level:3},{id:'T1070',name:'Indicator Removal',level:4},{id:'T1036',name:'Masquerading',level:3},{id:'T1027',name:'Obfuscated Files',level:2}] },
+  { tactic:'Credential Access', id:'TA0006', techniques:[{id:'T1110',name:'Brute Force',level:5},{id:'T1003',name:'OS Cred Dumping',level:2},{id:'T1555',name:'Creds from Password Stores',level:1},{id:'T1040',name:'Network Sniffing',level:3}] },
+  { tactic:'Discovery', id:'TA0007', techniques:[{id:'T1046',name:'Network Service Scan',level:5},{id:'T1082',name:'System Info Discovery',level:3},{id:'T1083',name:'File Discovery',level:2},{id:'T1033',name:'System Owner Discovery',level:1}] },
+  { tactic:'Lateral Movement', id:'TA0008', techniques:[{id:'T1021',name:'Remote Services',level:2},{id:'T1550',name:'Use Alt Auth Material',level:1},{id:'T1534',name:'Internal Spearphishing',level:0},{id:'T1570',name:'Lateral Tool Transfer',level:1}] },
+  { tactic:'Exfiltration', id:'TA0010', techniques:[{id:'T1041',name:'Exfil Over C2',level:2},{id:'T1048',name:'Exfil Over Alt Protocol',level:1},{id:'T1567',name:'Exfil Over Web Service',level:0},{id:'T1029',name:'Scheduled Transfer',level:1}] },
+];
+const lvlColors = ['#1a2233','#1e3a5c','#1f5290','#1565c0','#1976d2','#e53935'];
+
+function initMitreView() {
+  // Full matrix
+  let html = '<div style="display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:6px;">';
+  // Column headers
+  MITRE_DATA.forEach(t => {
+    html += `<div style="font-size:8px;color:var(--txt3);text-align:center;padding-bottom:4px;line-height:1.2;font-weight:600">${t.tactic}<br><span style="color:var(--txt3);opacity:.5">${t.id}</span></div>`;
+  });
+  // Technique rows (4 rows)
+  for (let row = 0; row < 4; row++) {
+    MITRE_DATA.forEach(tac => {
+      const tech = tac.techniques[row];
+      if (!tech) { html += '<div></div>'; return; }
+      const col = lvlColors[tech.level] || lvlColors[0];
+      const border = tech.level >= 4 ? '1px solid rgba(229,57,53,.5)' : '1px solid rgba(0,0,0,.2)';
+      html += `<div title="${tech.id}: ${tech.name} (level ${tech.level})" style="height:32px;border-radius:4px;background:${col};border:${border};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px;cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:7px;color:rgba(255,255,255,.5);font-family:monospace">${tech.id}</span>
+        <span style="font-size:7px;color:rgba(255,255,255,.8);text-align:center;line-height:1.1">${tech.name.substring(0,14)}</span>
+      </div>`;
+    });
+  }
+  html += '</div>';
+  document.getElementById('mitreFullMatrix').innerHTML = html;
+
+  // Most active tactics
+  const sortedTactics = [...MITRE_DATA].sort((a,b) => b.techniques.reduce((s,t)=>s+t.level,0) - a.techniques.reduce((s,t)=>s+t.level,0));
+  document.getElementById('mitreTactics').innerHTML = sortedTactics.slice(0,5).map(t => {
+    const score = t.techniques.reduce((s,x)=>s+x.level,0);
+    const max = 20;
+    return `<div class="sp-row"><span class="sp-lbl" style="width:100px">${t.tactic}</span><div class="sp-bw"><div class="sp-b" style="width:${(score/max*100)}%;background:${score>12?'var(--red)':score>8?'var(--orange)':'var(--blue)'}"></div></div><span class="sp-v">${score}</span></div>`;
+  }).join('');
+
+  // Recent technique hits
+  const highTechs = MITRE_DATA.flatMap(t => t.techniques.filter(x=>x.level>=3).map(x=>({...x, tactic:t.tactic}))).sort((a,b)=>b.level-a.level);
+  document.getElementById('mitreTechHits').innerHTML = highTechs.slice(0,5).map(t => `
+    <div class="tl-item">
+      <div class="tl-dot" style="background:${t.level>=4?'var(--red)':'var(--orange)'}"></div>
+      <div class="tl-body">
+        <div class="tl-title" style="font-size:11px">${t.name} <span class="badge ${t.level>=4?'b-crit':'b-high'}" style="font-size:8px">${t.id}</span></div>
+        <div class="tl-meta">${t.tactic}</div>
+      </div>
+    </div>`).join('');
+
+  // Pie chart
+  if (!document.getElementById('mitrePieChart')._inited) {
+    document.getElementById('mitrePieChart')._inited = true;
+    const labels = MITRE_DATA.map(t=>t.tactic.substring(0,8));
+    const data = MITRE_DATA.map(t=>t.techniques.reduce((s,x)=>s+x.level,0));
+    new Chart(document.getElementById('mitrePieChart').getContext('2d'), {
+      type:'doughnut', data:{ labels, datasets:[{ data, backgroundColor:['#1f6feb','#388bfd','#58a6ff','#a371f7','#e3b341','#f85149','#3fb950','#39c5cf','#1f6feb','#a371f7','#e3b341'], borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'55%', plugins:{ legend:{ display:true, position:'right', labels:{ color:'#8b949e', font:{size:8}, boxWidth:8, padding:4 } } } }
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// AUTO-RESPONSE / BLOCK LIST
+// ══════════════════════════════════════════════════════
+let blockedIPs = [];
+let arAutoCount = 0;
+let arStoppedCount = 0;
+
+function renderBlockTable() {
+  const tbody = document.getElementById('arBlockTable');
+  document.getElementById('arBlockCount').textContent = blockedIPs.length + ' entries';
+  document.getElementById('ar-blocked').textContent = blockedIPs.length;
+  if (!blockedIPs.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--txt3);padding:20px">No IPs blocked</td></tr>';
+    return;
+  }
+  tbody.innerHTML = blockedIPs.map((b,i) => `
+    <tr>
+      <td class="ip">${b.ip}</td>
+      <td><span class="badge ${b.risk==='CRITICAL'?'b-crit':b.risk==='HIGH'?'b-high':'b-med'}">${b.risk}</span></td>
+      <td class="mono">${fmtTs(b.time)}</td>
+      <td style="font-size:10px;color:var(--txt2)">${b.reason}</td>
+      <td><button class="tb-btn" onclick="unblockIP(${i})" style="font-size:10px;padding:2px 6px"><i class="ti ti-lock-open" style="font-size:10px"></i>Unblock</button></td>
+    </tr>`).join('');
+}
+
+function blockRandomIP() {
+  const ip = `${Math.floor(Math.random()*220)+1}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*254)+1}`;
+  const risks = ['CRITICAL','HIGH','HIGH','MEDIUM'];
+  const reasons = ['Port scan','Brute force','DDoS probe','SQL inject','RCE attempt'];
+  blockedIPs.unshift({ ip, risk: risks[Math.floor(Math.random()*risks.length)], time: new Date(), reason: reasons[Math.floor(Math.random()*reasons.length)] });
+  arAutoCount++;
+  arStoppedCount += Math.floor(Math.random()*200)+50;
+  document.getElementById('ar-auto').textContent = arAutoCount;
+  document.getElementById('ar-stopped').textContent = arStoppedCount;
+  renderBlockTable();
+}
+
+function unblockIP(idx) {
+  blockedIPs.splice(idx, 1);
+  renderBlockTable();
+}
+
+function clearAllBlocked() {
+  blockedIPs = [];
+  renderBlockTable();
+}
+
+function manualBlockIP() {
+  const ip = document.getElementById('manualIpInput').value.trim();
+  const risk = document.getElementById('manualRisk').value;
+  const status = document.getElementById('manualBlockStatus');
+  if (!ip) { status.innerHTML = '<span style="color:var(--red)">Enter an IP address</span>'; return; }
+  blockedIPs.unshift({ ip, risk, time: new Date(), reason: 'Manual block' });
+  document.getElementById('manualIpInput').value = '';
+  status.innerHTML = `<span style="color:var(--green)">✓ ${ip} blocked (${risk})</span>`;
+  document.getElementById('ar-blocked').textContent = blockedIPs.length;
+  document.getElementById('arBlockCount').textContent = blockedIPs.length + ' entries';
+  renderBlockTable();
+  setTimeout(()=>{ status.textContent=''; }, 3000);
+}
+
+// ══════════════════════════════════════════════════════
+// ALERTS & NOTIFY
+// ══════════════════════════════════════════════════════
+let notifLog = [];
+let notifTotal = 0;
+
+function logNotification(channel, severity, msg) {
+  notifLog.unshift({ channel, severity, msg, time: new Date(), status:'Sent' });
+  notifTotal++;
+  document.getElementById('notifCount').textContent = notifTotal + ' sent';
+  document.getElementById('notifLog').innerHTML = notifLog.slice(0,20).map(n => `
+    <tr>
+      <td class="mono">${fmtTs(n.time)}</td>
+      <td style="font-size:10px;color:var(--blue3)">${n.channel}</td>
+      <td><span class="badge ${n.severity==='CRITICAL'?'b-crit':n.severity==='HIGH'?'b-high':'b-med'}">${n.severity}</span></td>
+      <td style="font-size:10px;color:var(--txt)">${n.msg}</td>
+      <td><span class="badge b-ok">${n.status}</span></td>
+    </tr>`).join('');
+}
+
+function testNotification() {
+  const channels = [];
+  if (document.getElementById('ch-email')?.checked) channels.push('Email');
+  if (document.getElementById('ch-slack')?.checked) channels.push('Slack');
+  if (document.getElementById('ch-sms')?.checked) channels.push('SMS');
+  if (!channels.length) channels.push('Email');
+  channels.forEach(ch => logNotification(ch, 'HIGH', 'TEST: System notification check from CIDRS SOC'));
+}
+
+// ══════════════════════════════════════════════════════
+// LOG SOURCES / SYSTEM
+// ══════════════════════════════════════════════════════
+let sysChartInited = false;
+let sysChart;
+const cpuData = Array.from({length:20},()=>Math.floor(Math.random()*30)+20);
+const memData = Array.from({length:20},()=>Math.floor(Math.random()*20)+55);
+
+function initSysCharts() {
+  const uptimeSec = Math.floor(Date.now()/1000) % 86400;
+  const h = Math.floor(uptimeSec/3600), m = Math.floor((uptimeSec%3600)/60);
+  document.getElementById('sys-uptime').textContent = `${h}h ${m}m`;
+  document.getElementById('sys-eps').textContent = (Math.random()*50+620).toFixed(0);
+  document.getElementById('sys-cpu').textContent = cpuData[cpuData.length-1]+'%';
+  document.getElementById('sys-mem').textContent = memData[memData.length-1]+'%';
+
+  if (sysChartInited) return;
+  sysChartInited = true;
+  sysChart = new Chart(document.getElementById('sysTimelineChart').getContext('2d'), {
+    type:'line',
+    data:{
+      labels: Array.from({length:20},(_,i)=>`-${19-i}m`),
+      datasets:[
+        { label:'CPU %', data:[...cpuData], borderColor:'#58a6ff', backgroundColor:'rgba(88,166,255,.06)', tension:.4, pointRadius:0, fill:true, borderWidth:1.5 },
+        { label:'Memory %', data:[...memData], borderColor:'#a371f7', backgroundColor:'rgba(163,113,247,.06)', tension:.4, pointRadius:0, fill:true, borderWidth:1.5 },
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, animation:{duration:300}, plugins:{ legend:{ display:true, labels:{ color:'#8b949e', font:{size:9}, boxWidth:8 } } }, scales:{
+      x:{ ticks:{font:{size:8},color:'#444d56',maxTicksLimit:8}, grid:{color:'rgba(255,255,255,.03)'} },
+      y:{ ticks:{font:{size:8},color:'#444d56'}, grid:{color:'rgba(255,255,255,.03)'}, beginAtZero:true, max:100 }
+    }}
+  });
+}
+
+function refreshSysHealth() {
+  cpuData.push(Math.floor(Math.random()*30)+20); cpuData.shift();
+  memData.push(Math.floor(Math.random()*20)+55); memData.shift();
+  document.getElementById('sys-cpu').textContent = cpuData[cpuData.length-1]+'%';
+  document.getElementById('sys-mem').textContent = memData[memData.length-1]+'%';
+  document.getElementById('sys-eps').textContent = (Math.random()*50+620).toFixed(0);
+  if (sysChart) { sysChart.data.datasets[0].data=[...cpuData]; sysChart.data.datasets[1].data=[...memData]; sysChart.update(); }
+}
+
 initCharts();
 fetchData();
 setInterval(fetchData, 5000);
+// Refresh sys chart on interval when visible
+setInterval(()=>{ if (document.getElementById('view-logsources').style.display!=='none') refreshSysHealth(); }, 5000);
+// Auto-block from real incidents
+setInterval(()=>{
+  if (blockedIPs.length < 3 && Math.random() > 0.5) blockRandomIP();
+}, 8000);
+
 </script>
 </body>
 </html>
