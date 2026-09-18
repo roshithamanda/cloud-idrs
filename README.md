@@ -19,11 +19,14 @@ CIDRS is an academic intrusion detection and response platform built around a re
 ### Machine Learning Detection
 
 - Accepts a 41-feature NSL-KDD network-flow vector through `/detect`.
+- Also accepts named raw NSL-KDD fields through `feature_values`, using the same categorical mappings as training.
 - Classifies the event as `NORMAL` or `ATTACK` using the trained Random Forest.
 - Returns a confidence score, risk level, model vote, timestamp, and incident ID.
 - Assigns `LOW`, `MEDIUM`, `HIGH`, or `CRITICAL` risk from the attack prediction confidence.
 - Stores every prediction in SQLite for later investigation and reporting.
 - Exposes feature importance and evaluation metrics through `/model/metrics`.
+
+The shared preprocessing code is in `src/preprocessor/nsl_kdd.py`. It defines the 41-field schema, strips dataset values consistently, encodes `protocol_type`, `service`, and `flag`, and rejects missing or non-finite values. This module is used by both `scripts/train_random_forest.py` and the API.
 
 ### Incident Monitoring
 

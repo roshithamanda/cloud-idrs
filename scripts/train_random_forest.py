@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import sys
 
 import joblib
 import pandas as pd
@@ -10,26 +11,18 @@ from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precisio
 from time import perf_counter
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from src.preprocessor.nsl_kdd import FEATURE_NAMES, encode_frame, clean_frame
+
 DATA_PATH = ROOT / 'data' / 'raw' / 'NSL-KDD' / 'KDDTrain+.txt'
 TEST_PATH = ROOT / 'data' / 'raw' / 'NSL-KDD' / 'KDDTest+.txt'
 MODEL_DIR = ROOT / 'models' / 'random_forest'
-CATEGORICAL_COLUMNS = [1, 2, 3]
-FEATURE_NAMES = [
-    'duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes', 'land',
-    'wrong_fragment', 'urgent', 'hot', 'num_failed_logins', 'logged_in', 'num_compromised',
-    'root_shell', 'su_attempted', 'num_root', 'num_file_creations', 'num_shells',
-    'num_access_files', 'num_outbound_cmds', 'is_host_login', 'is_guest_login', 'count',
-    'srv_count', 'serror_rate', 'srv_serror_rate', 'rerror_rate', 'srv_rerror_rate',
-    'same_srv_rate', 'diff_srv_rate', 'srv_diff_host_rate', 'dst_host_count',
-    'dst_host_srv_count', 'dst_host_same_srv_rate', 'dst_host_diff_srv_rate',
-    'dst_host_same_src_port_rate', 'dst_host_srv_diff_host_rate', 'dst_host_serror_rate',
-    'dst_host_srv_serror_rate', 'dst_host_rerror_rate', 'dst_host_srv_rerror_rate',
-]
 
 
 def load_dataset(path):
     frame = pd.read_csv(path, header=None, sep='\t', skipinitialspace=True)
-    frame = frame.apply(lambda column: column.map(lambda value: value.strip() if isinstance(value, str) else value))
+    frame = clean_frame(frame)
     features = frame.iloc[:, :41].copy()
     labels = (frame.iloc[:, 41].astype(str).str.lower() != 'normal').astype(int)
     return features, labels
@@ -38,12 +31,7 @@ def load_dataset(path):
 def encode_features(features, categories=None):
     encoded = features.copy()
     categories = categories or {}
-    for column in CATEGORICAL_COLUMNS:
-        if column not in categories:
-            categories[column] = sorted(encoded[column].dropna().unique().tolist())
-        mapping = {value: index for index, value in enumerate(categories[column])}
-        encoded[column] = encoded[column].map(mapping).fillna(-1)
-    return encoded.astype(float), categories
+    return encode_frame(encoded, categories)
 
 
 def main():

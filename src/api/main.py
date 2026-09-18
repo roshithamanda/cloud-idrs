@@ -7,15 +7,16 @@ import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import joblib
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from src.responder.response_engine import ResponseEngine
+from src.preprocessor.nsl_kdd import preprocess_raw_record, validate_numeric_vector
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 MODEL_PATH = BASE_DIR / 'models' / 'random_forest' / 'rf_model.pkl'
@@ -36,9 +37,18 @@ engine = ResponseEngine(db_path=DB_PATH, use_aws=os.getenv('CIDRS_USE_AWS', 'fal
 
 
 class TrafficData(BaseModel):
-    features: List[float] = Field(min_length=41, max_length=41)
+    features: Optional[List[float]] = Field(default=None, min_length=41, max_length=41)
+    feature_values: Optional[Dict[str, Any]] = None
     source_ip: str
     timestamp: Optional[str] = None
+
+    @model_validator(mode='after')
+    def require_features(self):
+        if self.features is None and self.feature_values is None:
+            raise ValueError('Provide either features or named feature_values')
+        if self.features is not None and self.feature_values is not None:
+            raise ValueError('Provide only one of features or feature_values')
+        return self
 
 
 class BlockRequest(BaseModel):
@@ -127,7 +137,10 @@ def _since(minutes: int) -> str:
 
 
 def detect_attack(features: List[float]) -> Dict:
-    values = np.asarray(features, dtype=float).reshape(1, -1)
+    try:
+        values = validate_numeric_vector(features).reshape(1, -1)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if rf_model is None:
         raise HTTPException(status_code=503, detail='Random Forest model is not loaded')
     prediction = int(rf_model.predict(values)[0])
@@ -158,7 +171,15 @@ async def health_check():
 @app.post('/detect')
 async def detect(traffic: TrafficData):
     source_ip = _valid_ip(traffic.source_ip)
-    detection = detect_attack(traffic.features)
+    if traffic.feature_values is not None:
+        try:
+            categories = json.loads(METRICS_PATH.read_text()).get('categorical_categories', {})
+            processed = preprocess_raw_record(traffic.feature_values, categories).reshape(-1).tolist()
+        except (TypeError, ValueError, KeyError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    else:
+        processed = traffic.features
+    detection = detect_attack(processed)
     timestamp = traffic.timestamp or datetime.now(timezone.utc).isoformat()
     incident = {
         'timestamp': timestamp,

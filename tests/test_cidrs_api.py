@@ -3,6 +3,7 @@ import numpy as np
 from fastapi.testclient import TestClient
 
 from src.api import main
+from src.preprocessor.nsl_kdd import FEATURE_NAMES
 from src.responder.response_engine import ResponseEngine
 
 
@@ -59,3 +60,12 @@ def test_splunk_style_filters_and_stats(tmp_path, monkeypatch):
 
     invalid = client.post('/query', json={'query': 'DROP TABLE incidents'} )
     assert invalid.status_code == 400
+
+
+def test_named_raw_features_use_shared_preprocessor(tmp_path, monkeypatch):
+    client = make_client(tmp_path, monkeypatch)
+    values = {name: 0.1 for name in FEATURE_NAMES}
+    values.update({'protocol_type': 'tcp', 'service': 'http', 'flag': 'SF'})
+    response = client.post('/detect', json={'feature_values': values, 'source_ip': '192.0.2.20'})
+    assert response.status_code == 200
+    assert response.json()['source_ip'] == '192.0.2.20'
