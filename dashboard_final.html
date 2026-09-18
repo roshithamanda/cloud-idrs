@@ -337,7 +337,7 @@ tr.atk td{background:rgba(248,81,73,.04)}
     <div class="sb-item" data-view="alerts"><i class="ti ti-mail"></i>Alerts &amp; Notify</div>
 
     <div class="sb-section">System</div>
-    <div class="sb-item" data-view="logsources"><i class="ti ti-server"></i>AWS EC2 <span class="sb-badge ok" id="sbEc2">OK</span></div>
+    <div class="sb-item" data-view="logsources"><i class="ti ti-server"></i>API host <span class="sb-badge ok" id="sbEc2">OK</span></div>
     <div class="sb-item" data-view="logsources"><i class="ti ti-api"></i>API Health</div>
     <div class="sb-item" data-view="logsources"><i class="ti ti-database"></i>Log Sources</div>
   </div>
@@ -564,7 +564,7 @@ tr.atk td{background:rgba(248,81,73,.04)}
             <div class="h-row"><span class="h-name"><i class="ti ti-brain"></i>ML inference</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">ready</span></div></div>
             <div class="h-row"><span class="h-name"><i class="ti ti-bolt"></i>Response engine</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">active</span></div></div>
             <div class="h-row"><span class="h-name"><i class="ti ti-radio"></i>Alert pipeline</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">streaming</span></div></div>
-            <div class="h-row"><span class="h-name"><i class="ti ti-server"></i>EC2 instance</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">us-east-1</span></div></div>
+            <div class="h-row"><span class="h-name"><i class="ti ti-server"></i>API host</span><div class="h-status"><span class="sdot s-ok-glow"></span><span style="color:var(--green)">connected</span></div></div>
             <div class="h-row"><span class="h-name"><i class="ti ti-database"></i>Log pipeline</span><div class="h-status"><span class="sdot s-warn"></span><span style="color:var(--orange)">buffering</span></div></div>
           </div>
         </div>
@@ -704,12 +704,12 @@ tr.atk td{background:rgba(248,81,73,.04)}
         <div class="panel">
           <div class="ph"><div class="ph-title"><i class="ti ti-info-circle"></i>Model info</div></div>
           <div class="pb">
-            <div class="h-row"><span class="h-name">Algorithm</span><span style="font-size:11px;color:var(--blue3);font-family:monospace">Random Forest + XGBoost</span></div>
+            <div class="h-row"><span class="h-name">Algorithm</span><span style="font-size:11px;color:var(--blue3);font-family:monospace">Random Forest</span></div>
             <div class="h-row"><span class="h-name">Features</span><span style="font-size:11px;color:var(--txt);font-family:monospace">41 network features</span></div>
-            <div class="h-row"><span class="h-name">Training size</span><span style="font-size:11px;color:var(--txt);font-family:monospace">125,000 samples</span></div>
-            <div class="h-row"><span class="h-name">Last retrained</span><span style="font-size:11px;color:var(--txt);font-family:monospace">2024-06-10 03:00 UTC</span></div>
-            <div class="h-row"><span class="h-name">Version</span><span style="font-size:11px;color:var(--green);font-family:monospace">v3.2.1 (stable)</span></div>
-            <div class="h-row"><span class="h-name">Dataset</span><span style="font-size:11px;color:var(--txt);font-family:monospace">NSL-KDD + custom</span></div>
+            <div class="h-row"><span class="h-name">Training size</span><span style="font-size:11px;color:var(--txt);font-family:monospace" id="ml-train-size">—</span></div>
+            <div class="h-row"><span class="h-name">Evaluation set</span><span style="font-size:11px;color:var(--txt);font-family:monospace" id="ml-test-size">—</span></div>
+            <div class="h-row"><span class="h-name">Version</span><span style="font-size:11px;color:var(--green);font-family:monospace">NSL-KDD baseline</span></div>
+            <div class="h-row"><span class="h-name">Dataset</span><span style="font-size:11px;color:var(--txt);font-family:monospace">Official train/test split</span></div>
           </div>
         </div>
       </div>
@@ -790,8 +790,8 @@ tr.atk td{background:rgba(248,81,73,.04)}
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rule-expire" checked style="accent-color:var(--purple)"><span style="font-size:11px;color:var(--green)">ON</span></label>
               </div>
               <div class="h-row">
-                <span class="h-name"><i class="ti ti-brand-aws"></i>Sync to AWS WAF</span>
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rule-waf" checked style="accent-color:var(--teal)"><span style="font-size:11px;color:var(--green)">ON</span></label>
+                <span class="h-name"><i class="ti ti-cloud-off"></i>AWS WAF integration</span>
+                <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="rule-waf" disabled style="accent-color:var(--teal)"><span style="font-size:11px;color:var(--txt3)">NOT CONFIGURED</span></label>
               </div>
             </div>
           </div>
@@ -930,13 +930,14 @@ tr.atk td{background:rgba(248,81,73,.04)}
 
 <!-- Footer -->
 <div id="footer">
-  <span>CIDRS v4.0 &nbsp;·&nbsp; AWS EC2 &nbsp;·&nbsp; <span id="apiUrl">http://16.170.252.94:8000</span></span>
+  <span>CIDRS v4.0 &nbsp;·&nbsp; Local API &nbsp;·&nbsp; <span id="apiUrl">http://127.0.0.1:8000</span></span>
   <span id="footerStatus">Auto-refresh: 5s interval</span>
   <span>Build 2024.06 &nbsp;·&nbsp; ML Model v3.2 &nbsp;·&nbsp; <span id="footerTime">—</span></span>
 </div>
 
 <script>
-const API_URL = 'http://16.170.252.94:8000';
+const API_URL = window.CIDRS_API_URL || (location.protocol === 'file:' ? 'http://127.0.0.1:8000' : location.origin);
+document.getElementById('apiUrl').textContent = API_URL;
 const SLOTS = 20;
 let tData = Array(SLOTS).fill(0);
 let aData = Array(SLOTS).fill(0);
@@ -946,7 +947,20 @@ let prevTotal = 0, prevAtks = 0;
 let feedItems = [];
 let topIPMap = {};
 let hourlyBuckets = Array(12).fill(0);
-let anomalyScores = Array(24).fill(0).map(() => Math.floor(Math.random() * 30));
+let anomalyScores = Array(24).fill(0);
+let systemHistory = { cpu: Array(20).fill(0), memory: Array(20).fill(0) };
+
+async function apiFetch(path, options = {}) {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || `API request failed (${response.status})`);
+  }
+  return response.json();
+}
 
 /* Clock */
 function updateClock() {
@@ -1084,9 +1098,11 @@ const SIGS = ['Port scan detected','SQL injection attempt','Brute force login','
 
 async function fetchData() {
   try {
-    const [sRes, aRes] = await Promise.all([fetch(`${API_URL}/stats`), fetch(`${API_URL}/alerts`)]);
-    const stats = await sRes.json();
-    const alerts = await aRes.json();
+    const minutes = Number(document.getElementById('timeRange').value);
+    const [stats, alerts] = await Promise.all([
+      apiFetch(`/stats?minutes=${minutes}`),
+      apiFetch(`/alerts?minutes=${minutes}&limit=1000`),
+    ]);
     const inc = alerts.incidents || [];
 
     const tot  = stats.total_incidents  || 0;
@@ -1094,7 +1110,7 @@ async function fetchData() {
     const blk  = stats.ips_blocked      || 0;
     const norm = Math.max(0, tot - atks);
     const rate = tot ? ((atks/tot)*100).toFixed(1) : '0.0';
-    const mdt  = (Math.random()*4+0.5).toFixed(1) + 's';
+    const mdt  = stats.mean_detect_time_ms ? (stats.mean_detect_time_ms / 1000).toFixed(1) + 's' : '—';
 
     document.getElementById('kTotal').textContent   = tot;
     document.getElementById('kAtk').textContent     = atks;
@@ -1111,7 +1127,7 @@ async function fetchData() {
 
     tData.push(inc.slice(-5).length); tData.shift();
     aData.push(inc.filter(i=>i.is_attack).slice(-5).length); aData.shift();
-    bData.push(blk > 0 ? Math.floor(Math.random()*blk) : 0); bData.shift();
+    bData.push(blk); bData.shift();
     if (trafficChart) {
       trafficChart.data.datasets[0].data = [...tData];
       trafficChart.data.datasets[1].data = [...aData];
@@ -1130,7 +1146,7 @@ async function fetchData() {
     document.getElementById('spLow').style.width=(low/mx*100)+'%';  document.getElementById('spLowV').textContent=low;
 
     hourlyBuckets.push(aData[aData.length-1] || 0); hourlyBuckets.shift();
-    anomalyScores.push(Math.min(100, Math.floor((atks/Math.max(tot,1))*100 + Math.random()*20)));
+    anomalyScores.push(Math.min(100, Math.round((atks/Math.max(tot,1))*100))); 
     anomalyScores.shift();
     if (hourlyChart) { hourlyChart.data.datasets[0].data=[...hourlyBuckets]; hourlyChart.update(); }
     if (anomalyChart) {
@@ -1163,6 +1179,7 @@ async function fetchData() {
 
     buildTopIPs(inc);
     buildTimeline(inc);
+    updateMapStats(inc.filter(item => item.is_attack));
 
     document.getElementById('h-api').className = 'sdot s-ok-glow';
     document.getElementById('h-api-t').textContent = 'connected';
@@ -1190,37 +1207,62 @@ async function fetchData() {
 
 async function sendAttack() {
   const ip = `10.${Math.floor(Math.random()*50)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*254)+1}`;
-  document.getElementById('testStatus').textContent = 'Sending attack…';
+  document.getElementById('testStatus').textContent = 'Sending test traffic…';
   try {
-    const r = await fetch(`${API_URL}/detect`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({features:Array(41).fill(0.9),source_ip:ip})});
-    const d = await r.json();
+    const d = await apiFetch('/detect',{method:'POST',body:JSON.stringify({features:Array(41).fill(0.9),source_ip:ip})});
     const conf = ((d.confidence||0)*100).toFixed(0);
     const det = d.is_attack;
     document.getElementById('testStatus').innerHTML = `<span style="color:${det?'var(--red)':'var(--orange)'}">${det?'Attack detected':'Not flagged'}</span> &nbsp;·&nbsp; ${ip} &nbsp;·&nbsp; ${conf}% conf`;
-    addFeed(`Simulated attack from ${ip} — ${det?'DETECTED':'missed'} at ${conf}% confidence`, 'atk');
+    addFeed(`Test traffic from ${ip} — ${det?'DETECTED':'not flagged'} at ${conf}% confidence`, det ? 'atk' : 'ok');
     setTimeout(fetchData, 600);
     setTimeout(()=>{ document.getElementById('testStatus').textContent=''; }, 5000);
-  } catch(e) { document.getElementById('testStatus').textContent = 'Request failed'; }
+  } catch(e) { document.getElementById('testStatus').textContent = `Request failed: ${e.message}`; }
 }
 
 async function sendNormal() {
   const ip = `192.168.${Math.floor(Math.random()*5)+1}.${Math.floor(Math.random()*254)+1}`;
-  document.getElementById('testStatus').textContent = 'Sending normal traffic…';
+  document.getElementById('testStatus').textContent = 'Sending test traffic…';
   try {
-    const r = await fetch(`${API_URL}/detect`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({features:Array(41).fill(0.1),source_ip:ip})});
-    const d = await r.json();
+    const d = await apiFetch('/detect',{method:'POST',body:JSON.stringify({features:Array(41).fill(0.1),source_ip:ip})});
     document.getElementById('testStatus').innerHTML = `<span style="color:var(--green)">Normal</span> from ${ip} — ${d.is_attack?'<span style="color:var(--red)">FP: flagged as attack</span>':'classified normal'}`;
     addFeed(`Normal traffic from ${ip} — ${d.is_attack?'FALSE POSITIVE':'OK, classified normal'}`, 'ok');
     setTimeout(fetchData, 600);
     setTimeout(()=>{ document.getElementById('testStatus').textContent=''; }, 5000);
-  } catch(e) { document.getElementById('testStatus').textContent = 'Request failed'; }
+  } catch(e) { document.getElementById('testStatus').textContent = `Request failed: ${e.message}`; }
 }
 
-function runSplQuery() {
+async function runSplQuery() {
   const q = document.getElementById('spl-input').value.trim() || 'source_ip="*" | stats count by attack_type';
   const panel = document.getElementById('splPanel');
   panel.style.display = 'flex';
-  document.getElementById('splOutput').textContent = `Executing: ${q}\n\nSimulated result:\n\nattack_type          count  pct\n---------------------------------\nPort scan            12     34%\nBrute force          8      23%\nSQL injection        6      17%\nDDoS                 5      14%\nXSS probe            4      11%\n\nCompleted in 0.24s — 35 events scanned`;
+  document.getElementById('splOutput').textContent = `Executing: ${q}\n`;
+  try {
+    const result = await apiFetch('/query', { method:'POST', body:JSON.stringify({query:q}) });
+    const output = document.getElementById('splOutput');
+    if (!result.rows.length) {
+      output.textContent += '\nNo matching events.';
+      return;
+    }
+    const headers = Object.keys(result.rows[0]);
+    const table = document.createElement('table');
+    table.style.cssText = 'font-size:11px;color:var(--txt);margin-top:10px;width:100%';
+    table.innerHTML = `<thead><tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr></thead>`;
+    const body = document.createElement('tbody');
+    result.rows.forEach(row => {
+      const tr = document.createElement('tr');
+      headers.forEach(header => {
+        const td = document.createElement('td');
+        td.textContent = row[header] == null ? '' : String(row[header]);
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    output.textContent += `\n${result.count} events returned`;
+    output.appendChild(table);
+  } catch (e) {
+    document.getElementById('splOutput').textContent += `\nQuery failed: ${e.message}`;
+  }
 }
 
 /* Tabs */
@@ -1320,21 +1362,12 @@ function placeDot(region) {
 }
 
 function updateMapStats(attacks) {
-  const regions = new Set(attacks.map(a => {
-    // Map source IP to a pseudo-region based on first octet
-    const oct = parseInt((a.source_ip||'0').split('.')[0]);
-    if (oct < 50) return 'N.America';
-    if (oct < 100) return 'E.Europe';
-    if (oct < 150) return 'E.Asia';
-    if (oct < 200) return 'S.Asia';
-    return 'W.Europe';
-  }));
-  const topR = [...regions][0] || '—';
-  document.getElementById('mapTotalAtks').textContent = mapArcCount;
-  document.getElementById('mapUniqueCtry').textContent = Object.keys(mapActiveDots).length || THREAT_REGIONS.length;
-  document.getElementById('mapTopRegion').textContent = topR;
-  document.getElementById('mapAtkBadge').textContent = Math.max(Object.keys(mapActiveDots).length, attacks.length) + ' active threats';
-  document.getElementById('mapCountryBadge').textContent = THREAT_REGIONS.length + ' countries';
+  const sources = new Set(attacks.map(a => a.source_ip).filter(Boolean));
+  document.getElementById('mapTotalAtks').textContent = attacks.length;
+  document.getElementById('mapUniqueCtry').textContent = sources.size;
+  document.getElementById('mapTopRegion').textContent = sources.size ? 'Source IPs' : '—';
+  document.getElementById('mapAtkBadge').textContent = attacks.length + ' active threats';
+  document.getElementById('mapCountryBadge').textContent = sources.size + ' sources';
 }
 
 // Fire arcs on a timer — independently of API to keep it lively
@@ -1345,22 +1378,6 @@ function fireRandomArc() {
   fireArc(r);
   arcIdx++;
 }
-// Initial burst
-for (let i = 0; i < 5; i++) setTimeout(fireRandomArc, i * 300);
-// Continuous fire
-setInterval(() => {
-  const n = Math.floor(Math.random() * 2) + 1;
-  for (let i = 0; i < n; i++) setTimeout(fireRandomArc, i * 200);
-  updateMapStats([]);
-}, 1800);
-
-// Hook into fetchData to also drive map from real attack data
-const _origFetch = fetchData;
-async function fetchDataWithMap() {
-  await _origFetch.call(this);
-}
-
-
 // ══════════════════════════════════════════════════════
 // VIEW SWITCHING ENGINE
 // ══════════════════════════════════════════════════════
@@ -1378,7 +1395,9 @@ function switchView(viewId) {
   });
   if (viewId === 'mlmodel') initMLCharts();
   if (viewId === 'mitre') initMitreView();
-  if (viewId === 'logsources') initSysCharts();
+  if (viewId === 'autoresponse') refreshBlocks().catch(e => console.error(e));
+  if (viewId === 'alerts') refreshNotifications().catch(e => console.error(e));
+  if (viewId === 'logsources') initSysCharts().catch(e => console.error(e));
 }
 
 // Wire up sidebar items
@@ -1394,14 +1413,17 @@ document.querySelectorAll('.tab[data-view]').forEach(tab => {
 // ML MODEL VIEW
 // ══════════════════════════════════════════════════════
 let mlChartsInited = false;
-function initMLCharts() {
+async function initMLCharts() {
   if (mlChartsInited) return;
   mlChartsInited = true;
   const opts = { responsive:true, maintainAspectRatio:false, animation:{duration:400}, plugins:{legend:{display:false}} };
+  const [model, alerts] = await Promise.all([apiFetch('/model/metrics'), apiFetch('/alerts?minutes=10080&limit=1000')]);
+  const metric = model.metrics || {};
 
   // Feature importance
-  const features = ['duration','src_bytes','dst_bytes','land','wrong_frag','urgent','hot','num_failed','logged_in','num_comp'];
-  const importance = [0.18,0.15,0.14,0.11,0.09,0.08,0.07,0.06,0.05,0.04];
+  const features = (model.feature_names || []).slice(0, 10);
+  const importance = (model.feature_importance || []).slice(0, 10);
+  while (features.length < importance.length) features.push(`feature_${features.length + 1}`);
   new Chart(document.getElementById('mlFeatureChart').getContext('2d'), {
     type:'bar', data:{ labels:features, datasets:[{ data:importance, backgroundColor:importance.map((_,i)=>i<3?'#a371f7':i<6?'#1f6feb':'#1a2d40'), borderRadius:3 }] },
     options:{ ...opts, indexAxis:'y', scales:{ x:{ ticks:{font:{size:8},color:'#444d56',format:{style:'percent'}}, grid:{color:'rgba(255,255,255,.03)'} }, y:{ ticks:{font:{size:9},color:'#8b949e'}, grid:{display:false} } } }
@@ -1409,25 +1431,27 @@ function initMLCharts() {
 
   // Confidence histogram
   const confBins = Array.from({length:10},(_,i)=>i*10+5);
-  const confCounts = [2,1,3,2,4,5,8,15,22,38];
+  const confCounts = Array(10).fill(0);
+  (alerts.incidents || []).forEach(item => confCounts[Math.min(9, Math.floor((item.confidence || 0) * 10))]++);
   new Chart(document.getElementById('mlConfChart').getContext('2d'), {
     type:'bar', data:{ labels:confBins.map(b=>b+'%'), datasets:[{ data:confCounts, backgroundColor:confCounts.map((_,i)=>i>6?'#f85149':i>4?'#e3b341':'#1f6feb'), borderRadius:3 }] },
     options:{ ...opts, scales:{ x:{ ticks:{font:{size:9},color:'#444d56'}, grid:{display:false} }, y:{ ticks:{font:{size:9},color:'#444d56'}, grid:{color:'rgba(255,255,255,.03)'}, beginAtZero:true } } }
   });
 
-  // Confusion matrix mock values
-  document.getElementById('cm-tp').textContent = '4821';
-  document.getElementById('cm-fn').textContent = '156';
-  document.getElementById('cm-fp').textContent = '134';
-  document.getElementById('cm-tn').textContent = '11203';
+  document.getElementById('cm-tp').textContent = metric.true_positive ?? 'N/A';
+  document.getElementById('cm-fn').textContent = metric.false_negative ?? 'N/A';
+  document.getElementById('cm-fp').textContent = metric.false_positive ?? 'N/A';
+  document.getElementById('cm-tn').textContent = metric.true_negative ?? 'N/A';
 
   // Randomize KPIs slightly each visit
-  document.getElementById('ml-acc').textContent = (97 + Math.random()*2).toFixed(1)+'%';
-  document.getElementById('ml-prec').textContent = (96 + Math.random()*2).toFixed(1)+'%';
-  document.getElementById('ml-rec').textContent = (95 + Math.random()*3).toFixed(1)+'%';
-  document.getElementById('ml-inf').textContent = (1+Math.random()).toFixed(1)+'ms';
+  document.getElementById('ml-acc').textContent = `${((metric.accuracy || 0) * 100).toFixed(1)}%`;
+  document.getElementById('ml-prec').textContent = `${((metric.precision || 0) * 100).toFixed(1)}%`;
+  document.getElementById('ml-rec').textContent = `${((metric.recall || 0) * 100).toFixed(1)}%`;
+  document.getElementById('ml-inf').textContent = metric.inference_ms ? `${metric.inference_ms.toFixed(3)}ms` : '—';
+  document.getElementById('ml-train-size').textContent = `${metric.training_samples || '—'} samples`;
+  document.getElementById('ml-test-size').textContent = `${metric.test_samples || '—'} samples`;
 }
-function refreshML() { mlChartsInited = false; initMLCharts(); }
+function refreshML() { mlChartsInited = false; initMLCharts().catch(e => console.error(e)); }
 
 // ══════════════════════════════════════════════════════
 // MITRE ATT&CK FULL VIEW
@@ -1520,46 +1544,47 @@ function renderBlockTable() {
     <tr>
       <td class="ip">${b.ip}</td>
       <td><span class="badge ${b.risk==='CRITICAL'?'b-crit':b.risk==='HIGH'?'b-high':'b-med'}">${b.risk}</span></td>
-      <td class="mono">${fmtTs(b.time)}</td>
+      <td class="mono">${fmtTs(b.blocked_at)}</td>
       <td style="font-size:10px;color:var(--txt2)">${b.reason}</td>
       <td><button class="tb-btn" onclick="unblockIP(${i})" style="font-size:10px;padding:2px 6px"><i class="ti ti-lock-open" style="font-size:10px"></i>Unblock</button></td>
     </tr>`).join('');
 }
 
-function blockRandomIP() {
-  const ip = `${Math.floor(Math.random()*220)+1}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*254)+1}`;
-  const risks = ['CRITICAL','HIGH','HIGH','MEDIUM'];
-  const reasons = ['Port scan','Brute force','DDoS probe','SQL inject','RCE attempt'];
-  blockedIPs.unshift({ ip, risk: risks[Math.floor(Math.random()*risks.length)], time: new Date(), reason: reasons[Math.floor(Math.random()*reasons.length)] });
-  arAutoCount++;
-  arStoppedCount += Math.floor(Math.random()*200)+50;
-  document.getElementById('ar-auto').textContent = arAutoCount;
-  document.getElementById('ar-stopped').textContent = arStoppedCount;
+async function refreshBlocks() {
+  const result = await apiFetch('/blocks');
+  blockedIPs = result.blocks || [];
   renderBlockTable();
 }
 
-function unblockIP(idx) {
-  blockedIPs.splice(idx, 1);
-  renderBlockTable();
+async function blockRandomIP() {
+  const ip = window.prompt('IP address to block');
+  if (!ip) return;
+  await apiFetch('/blocks', { method:'POST', body:JSON.stringify({ ip, risk:'HIGH', reason:'Manual block' }) });
+  await refreshBlocks();
 }
 
-function clearAllBlocked() {
-  blockedIPs = [];
-  renderBlockTable();
+async function unblockIP(idx) {
+  await apiFetch(`/blocks/${encodeURIComponent(blockedIPs[idx].ip)}`, { method:'DELETE' });
+  await refreshBlocks();
 }
 
-function manualBlockIP() {
+async function clearAllBlocked() {
+  await apiFetch('/blocks', { method:'DELETE' });
+  await refreshBlocks();
+}
+
+async function manualBlockIP() {
   const ip = document.getElementById('manualIpInput').value.trim();
   const risk = document.getElementById('manualRisk').value;
   const status = document.getElementById('manualBlockStatus');
   if (!ip) { status.innerHTML = '<span style="color:var(--red)">Enter an IP address</span>'; return; }
-  blockedIPs.unshift({ ip, risk, time: new Date(), reason: 'Manual block' });
-  document.getElementById('manualIpInput').value = '';
-  status.innerHTML = `<span style="color:var(--green)">✓ ${ip} blocked (${risk})</span>`;
-  document.getElementById('ar-blocked').textContent = blockedIPs.length;
-  document.getElementById('arBlockCount').textContent = blockedIPs.length + ' entries';
-  renderBlockTable();
-  setTimeout(()=>{ status.textContent=''; }, 3000);
+  try {
+    await apiFetch('/blocks', { method:'POST', body:JSON.stringify({ ip, risk, reason:'Manual block' }) });
+    document.getElementById('manualIpInput').value = '';
+    status.innerHTML = `<span style="color:var(--green)">✓ ${ip} blocked (${risk})</span>`;
+    await refreshBlocks();
+    setTimeout(()=>{ status.textContent=''; }, 3000);
+  } catch (e) { status.innerHTML = `<span style="color:var(--red)">${e.message}</span>`; }
 }
 
 // ══════════════════════════════════════════════════════
@@ -1582,13 +1607,27 @@ function logNotification(channel, severity, msg) {
     </tr>`).join('');
 }
 
-function testNotification() {
+async function refreshNotifications() {
+  const result = await apiFetch('/notifications');
+  notifLog = result.notifications || [];
+  notifTotal = notifLog.length;
+  document.getElementById('notifCount').textContent = notifTotal + ' sent';
+  document.getElementById('notifLog').innerHTML = notifLog.length ? notifLog.map(n => `
+    <tr><td class="mono">${fmtTs(n.timestamp)}</td><td style="font-size:10px;color:var(--blue3)">${n.channel}</td>
+    <td><span class="badge ${n.severity==='CRITICAL'?'b-crit':n.severity==='HIGH'?'b-high':'b-med'}">${n.severity}</span></td>
+    <td style="font-size:10px;color:var(--txt)">${n.message}</td><td><span class="badge b-ok">${n.status}</span></td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--txt3);padding:16px">No notifications sent yet</td></tr>';
+}
+
+async function testNotification() {
   const channels = [];
   if (document.getElementById('ch-email')?.checked) channels.push('Email');
   if (document.getElementById('ch-slack')?.checked) channels.push('Slack');
   if (document.getElementById('ch-sms')?.checked) channels.push('SMS');
   if (!channels.length) channels.push('Email');
-  channels.forEach(ch => logNotification(ch, 'HIGH', 'TEST: System notification check from CIDRS SOC'));
+  try {
+    await Promise.all(channels.map(channel => apiFetch('/notifications', { method:'POST', body:JSON.stringify({ channel, severity:'HIGH', message:'TEST: System notification check from CIDRS SOC' }) })));
+    await refreshNotifications();
+  } catch (e) { document.getElementById('notifCount').textContent = e.message; }
 }
 
 // ══════════════════════════════════════════════════════
@@ -1596,14 +1635,17 @@ function testNotification() {
 // ══════════════════════════════════════════════════════
 let sysChartInited = false;
 let sysChart;
-const cpuData = Array.from({length:20},()=>Math.floor(Math.random()*30)+20);
-const memData = Array.from({length:20},()=>Math.floor(Math.random()*20)+55);
+const cpuData = Array(20).fill(0);
+const memData = Array(20).fill(0);
 
-function initSysCharts() {
-  const uptimeSec = Math.floor(Date.now()/1000) % 86400;
+async function initSysCharts() {
+  const system = await apiFetch('/system');
+  const uptimeSec = system.uptime_seconds || 0;
   const h = Math.floor(uptimeSec/3600), m = Math.floor((uptimeSec%3600)/60);
   document.getElementById('sys-uptime').textContent = `${h}h ${m}m`;
-  document.getElementById('sys-eps').textContent = (Math.random()*50+620).toFixed(0);
+  document.getElementById('sys-eps').textContent = Number(system.events_per_second || 0).toFixed(2);
+  cpuData.push(system.cpu_percent || 0); cpuData.shift();
+  memData.push(system.memory_percent || 0); memData.shift();
   document.getElementById('sys-cpu').textContent = cpuData[cpuData.length-1]+'%';
   document.getElementById('sys-mem').textContent = memData[memData.length-1]+'%';
 
@@ -1625,12 +1667,13 @@ function initSysCharts() {
   });
 }
 
-function refreshSysHealth() {
-  cpuData.push(Math.floor(Math.random()*30)+20); cpuData.shift();
-  memData.push(Math.floor(Math.random()*20)+55); memData.shift();
+async function refreshSysHealth() {
+  const system = await apiFetch('/system');
+  cpuData.push(system.cpu_percent || 0); cpuData.shift();
+  memData.push(system.memory_percent || 0); memData.shift();
   document.getElementById('sys-cpu').textContent = cpuData[cpuData.length-1]+'%';
   document.getElementById('sys-mem').textContent = memData[memData.length-1]+'%';
-  document.getElementById('sys-eps').textContent = (Math.random()*50+620).toFixed(0);
+  document.getElementById('sys-eps').textContent = Number(system.events_per_second || 0).toFixed(2);
   if (sysChart) { sysChart.data.datasets[0].data=[...cpuData]; sysChart.data.datasets[1].data=[...memData]; sysChart.update(); }
 }
 
@@ -1638,11 +1681,7 @@ initCharts();
 fetchData();
 setInterval(fetchData, 5000);
 // Refresh sys chart on interval when visible
-setInterval(()=>{ if (document.getElementById('view-logsources').style.display!=='none') refreshSysHealth(); }, 5000);
-// Auto-block from real incidents
-setInterval(()=>{
-  if (blockedIPs.length < 3 && Math.random() > 0.5) blockRandomIP();
-}, 8000);
+setInterval(()=>{ if (document.getElementById('view-logsources').style.display!=='none') refreshSysHealth().catch(console.error); }, 5000);
 
 </script>
 </body>
