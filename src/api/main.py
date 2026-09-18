@@ -191,10 +191,11 @@ async def detect(traffic: TrafficData):
     }
     saved = engine.log_incident(incident)
     auto_blocked = False
+    response = None
     if detection['is_attack'] and detection['risk_level'] == 'CRITICAL':
-        engine.block_ip(source_ip, detection['risk_level'], 'Automatic critical-risk response', automatic=True)
+        response = engine.block_ip(source_ip, detection['risk_level'], 'Automatic critical-risk response', automatic=True)
         auto_blocked = True
-    return {**incident, 'model_votes': detection['votes'], 'incident_id': saved['incident_id'], 'auto_blocked': auto_blocked}
+    return {**incident, 'model_votes': detection['votes'], 'incident_id': saved['incident_id'], 'auto_blocked': auto_blocked, 'response': response}
 
 
 @app.get('/alerts')
@@ -213,6 +214,11 @@ async def get_stats(minutes: int = Query(60, ge=1, le=525600)):
 @app.get('/blocks')
 async def get_blocks():
     return {'blocks': engine.list_blocked()}
+
+
+@app.get('/response/status')
+async def response_status():
+    return engine.firewall_status()
 
 
 @app.post('/blocks')

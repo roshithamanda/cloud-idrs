@@ -29,9 +29,11 @@ def test_detection_is_persisted_and_reported(tmp_path, monkeypatch):
 
 def test_blocklist_and_notifications_are_persistent(tmp_path, monkeypatch):
     client = make_client(tmp_path, monkeypatch)
+    assert client.get('/response/status').json()['mode'] == 'database'
 
     block = client.post('/blocks', json={'ip': '203.0.113.5', 'risk': 'HIGH', 'reason': 'test'} )
     assert block.status_code == 200
+    assert block.json()['enforcement']['enforced'] is False
     assert client.get('/blocks').json()['blocks'][0]['ip'] == '203.0.113.5'
 
     notification = client.post('/notifications', json={'channel': 'Email', 'severity': 'HIGH', 'message': 'test alert'})

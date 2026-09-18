@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 
+from src.responder.firewall_provider import FirewallProvider
+
 
 class ResponseEngine:
     def __init__(self, db_path=None, use_aws=False):
@@ -14,6 +16,7 @@ class ResponseEngine:
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.lock = Lock()
+        self.firewall = FirewallProvider()
         self.init_database()
 
     def init_database(self):
@@ -101,22 +104,28 @@ class ResponseEngine:
 
     def block_ip(self, ip, risk, reason, automatic=False):
         blocked_at = datetime.now(timezone.utc).isoformat()
+        enforcement = self.firewall.block(ip)
         with self.lock, self.conn:
             self.conn.execute('''
                 INSERT INTO blocked_ips (ip, blocked_at, risk, reason, automatic)
                 VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(ip) DO UPDATE SET risk=excluded.risk, reason=excluded.reason
             ''', (ip, blocked_at, risk, reason, 1 if automatic else 0))
-        return {'ip': ip, 'blocked_at': blocked_at, 'risk': risk, 'reason': reason, 'automatic': automatic}
+        return {'ip': ip, 'blocked_at': blocked_at, 'risk': risk, 'reason': reason, 'automatic': automatic, 'enforcement': enforcement}
 
     def unblock_ip(self, ip):
+        self.firewall.unblock(ip)
         with self.lock, self.conn:
             cursor = self.conn.execute('DELETE FROM blocked_ips WHERE ip = ?', (ip,))
         return cursor.rowcount > 0
 
     def clear_blocks(self):
+        self.firewall.clear()
         with self.lock, self.conn:
             self.conn.execute('DELETE FROM blocked_ips')
+
+    def firewall_status(self):
+        return self.firewall.status()
 
     def log_notification(self, channel, severity, message, status='Sent'):
         timestamp = datetime.now(timezone.utc).isoformat()

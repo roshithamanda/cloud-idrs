@@ -11,6 +11,7 @@ CIDRS is an academic intrusion detection and response platform built around a re
 - FastAPI endpoints for detection, health, incidents, statistics, blocklist operations, saved queries, notifications, model metrics, and host metrics.
 - SQLite persistence for incidents, blocked IPs, and notification events.
 - Automatic blocking for CRITICAL model decisions and manual operator blocking.
+- Optional real local `nftables` enforcement for block, unblock, and clear actions.
 - Standalone Chart.js dashboard backed by the API rather than browser-only mock state.
 - Database migration for older incident databases.
 
@@ -141,6 +142,22 @@ Open `dashboard_final.html` directly for a local dashboard. When served from ano
 
 For a deployed environment, set `CIDRS_ALLOWED_ORIGINS` to an explicit comma-separated allowlist. Do not expose the development API directly to the public internet without authentication, HTTPS, and network controls.
 
+### Real Firewall Enforcement
+
+The default `CIDRS_FIREWALL_MODE=database` mode records response actions in SQLite without changing the host firewall. To enable real local Linux enforcement, install `nftables`, run the API under an account permitted to use `sudo nft`, and explicitly set:
+
+```bash
+export CIDRS_FIREWALL_MODE=nft
+```
+
+The API creates only the CIDRS-owned `inet cidrs_filter` table and `cidrs_input` chain. Check enforcement state with:
+
+```bash
+curl http://127.0.0.1:8000/response/status
+```
+
+Do not enable this mode on a remote server until its firewall policy and recovery access have been tested. The project never requests or stores a sudo password.
+
 ## API Surface
 
 | Method | Endpoint | Purpose |
@@ -205,6 +222,7 @@ The four tests use temporary SQLite databases and verify detection persistence, 
 - CORS can be restricted with `CIDRS_ALLOWED_ORIGINS`.
 - Secrets are not required by the local implementation and must not be committed.
 - AWS blocking is intentionally not claimed as implemented; the local response engine is the active response provider.
+- Host firewall enforcement is opt-in through `CIDRS_FIREWALL_MODE=nft`; database-only mode is the safe default.
 
 ## Academic Presentation Structure
 
