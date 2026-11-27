@@ -1,0 +1,27 @@
+{
+  "model_name": "CIDRS Multi-Model Ensemble",
+  "accuracy": 0.7823367636621718,
+  "precision": 0.9730245882072094,
+  "recall": 0.6352372788903607,
+  "f1_score": 0.768657771910801,
+  "specificity": 0.976727422510555,
+  "false_positive_rate": 0.02327257748944496,
+  "false_negative_rate": 0.3647627211096392,
+  "roc_auc": 0.9689270682483774,
+  "pr_auc": 0.9706089180915318,
+  "true_positive": 8152,
+  "true_negative": 9485,
+  "false_positive": 226,
+  "false_negative": 4681,
+  "inference_ms": 2.790000507957302e-06,
+  "training_time_seconds": 0.0,
+  "test_samples": 22544,
+  "dataset": "NSL-KDD official benchmark (KDDTest+)",
+  "voting_weights": {
+    "random_forest": 0.45,
+    "lstm": 0.35,
+    "autoencoder": 0.2
+  },
+  "hard_majority_accuracy": 0.790764726756565,
+  "hard_majority_f1": 0.779445457520924
+}

@@ -15,3 +15,11 @@ data/processed/*.npy
 # AWS credentials
 .aws/
 *.pem
+
+# Student assessment and confidential evaluation files
+assesment*
+assessment*
+
+# Local SQLite databases and temp files
+data/*.db
+.pytest_cache/

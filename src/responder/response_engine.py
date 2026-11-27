@@ -1,5 +1,7 @@
 """Persistent incident and response state for the CIDRS API."""
 
+from __future__ import annotations
+
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,7 +31,9 @@ class ResponseEngine:
                     is_attack INTEGER NOT NULL,
                     confidence REAL NOT NULL,
                     risk_level TEXT NOT NULL,
-                    model_votes TEXT NOT NULL DEFAULT '{}'
+                    model_votes TEXT NOT NULL DEFAULT '{}',
+                    mitre_technique TEXT NOT NULL DEFAULT 'N/A',
+                    attack_type TEXT NOT NULL DEFAULT 'Normal'
                 )
             ''')
             self.conn.execute('''
@@ -51,23 +55,30 @@ class ResponseEngine:
                     status TEXT NOT NULL
                 )
             ''')
+            # Migration check
             columns = {row['name'] for row in self.conn.execute('PRAGMA table_info(incidents)').fetchall()}
             if 'model_votes' not in columns:
                 self.conn.execute("ALTER TABLE incidents ADD COLUMN model_votes TEXT NOT NULL DEFAULT '{}'")
+            if 'mitre_technique' not in columns:
+                self.conn.execute("ALTER TABLE incidents ADD COLUMN mitre_technique TEXT NOT NULL DEFAULT 'N/A'")
+            if 'attack_type' not in columns:
+                self.conn.execute("ALTER TABLE incidents ADD COLUMN attack_type TEXT NOT NULL DEFAULT 'Normal'")
 
     def log_incident(self, incident):
         with self.lock, self.conn:
             cursor = self.conn.execute('''
                 INSERT INTO incidents
-                    (timestamp, source_ip, is_attack, confidence, risk_level, model_votes)
-                VALUES (?, ?, ?, ?, ?, ?)
+                    (timestamp, source_ip, is_attack, confidence, risk_level, model_votes, mitre_technique, attack_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 incident.get('timestamp', datetime.now(timezone.utc).isoformat()),
                 incident.get('source_ip', 'unknown'),
                 1 if incident.get('is_attack') else 0,
-                incident.get('confidence', 0),
-                incident.get('risk_level', 'LOW'),
-                incident.get('model_votes', '{}'),
+                float(incident.get('confidence', 0)),
+                str(incident.get('risk_level', 'LOW')),
+                str(incident.get('model_votes', '{}')),
+                str(incident.get('mitre_technique', 'N/A')),
+                str(incident.get('attack_type', 'Normal' if not incident.get('is_attack') else 'Anomaly')),
             ))
             return {'status': 'logged', 'incident_id': cursor.lastrowid}
 
@@ -141,6 +152,17 @@ class ResponseEngine:
             rows = self.conn.execute('SELECT * FROM notifications ORDER BY id DESC LIMIT ?', (max(1, min(int(limit), 100)),)).fetchall()
         return [dict(row) for row in rows]
 
+    def get_mitre_stats(self):
+        with self.lock:
+            rows = self.conn.execute('''
+                SELECT mitre_technique, COUNT(*) as count 
+                FROM incidents 
+                WHERE is_attack = 1 AND mitre_technique != 'N/A' 
+                GROUP BY mitre_technique 
+                ORDER BY count DESC
+            ''').fetchall()
+        return [dict(row) for row in rows]
+
     def query_incidents(self, source_ip=None, attacks_only=False, limit=100):
         clauses = []
         params = []
@@ -160,7 +182,7 @@ class ResponseEngine:
 
     def search_incidents(self, filters=None, group_by=None, sort_field=None, descending=False, limit=100, since=None):
         filters = filters or []
-        allowed_fields = {'source_ip', 'is_attack', 'risk_level', 'confidence', 'timestamp'}
+        allowed_fields = {'source_ip', 'is_attack', 'risk_level', 'confidence', 'timestamp', 'mitre_technique', 'attack_type'}
         clauses = []
         params = []
         for field, operator, value in filters:
@@ -175,8 +197,8 @@ class ResponseEngine:
         group_expression = None
         if group_by:
             if group_by == 'attack_type':
-                group_expression = "CASE WHEN is_attack = 1 THEN 'ATTACK' ELSE 'NORMAL' END"
-            elif group_by in {'source_ip', 'risk_level', 'is_attack'}:
+                group_expression = "CASE WHEN is_attack = 1 THEN attack_type ELSE 'NORMAL' END"
+            elif group_by in {'source_ip', 'risk_level', 'is_attack', 'mitre_technique'}:
                 group_expression = group_by
             else:
                 raise ValueError('Unsupported stats field')
@@ -206,7 +228,7 @@ class ResponseEngine:
 
     @staticmethod
     def _incident(row):
-        return {
+        d = {
             'id': row['id'],
             'timestamp': row['timestamp'],
             'source_ip': row['source_ip'],
@@ -215,3 +237,8 @@ class ResponseEngine:
             'risk_level': row['risk_level'],
             'model_votes': row['model_votes'],
         }
+        if 'mitre_technique' in row.keys():
+            d['mitre_technique'] = row['mitre_technique']
+        if 'attack_type' in row.keys():
+            d['attack_type'] = row['attack_type']
+        return d

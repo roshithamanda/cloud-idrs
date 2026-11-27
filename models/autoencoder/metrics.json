@@ -1,1 +1,29 @@
-{"accuracy": 0.993, "precision": 0.992, "recall": 0.995, "f1_score": 0.9935}
+{
+  "model_name": "Autoencoder Anomaly Detector",
+  "accuracy": 0.8516678495386799,
+  "precision": 0.9546717776712985,
+  "recall": 0.7762799033741136,
+  "f1_score": 0.8562833075468455,
+  "specificity": 0.9512923488827103,
+  "false_positive_rate": 0.04870765111728967,
+  "false_negative_rate": 0.22372009662588638,
+  "roc_auc": 0.9448826321074919,
+  "pr_auc": 0.9398855615453439,
+  "true_positive": 9962,
+  "true_negative": 9238,
+  "false_positive": 473,
+  "false_negative": 2871,
+  "inference_ms": 1.4888000805513002e-05,
+  "training_time_seconds": 2.9,
+  "test_samples": 22544,
+  "dataset": "NSL-KDD official benchmark (KDDTest+)",
+  "anomaly_threshold": 0.27944523096084595,
+  "training_loss_history": [
+    0.5070392602463761,
+    0.3297652998742805,
+    0.2773352833092589,
+    0.26508019077204853,
+    0.2614677055205143,
+    0.22829827200835726
+  ]
+}

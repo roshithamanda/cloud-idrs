@@ -1,1 +1,28 @@
-{"accuracy": 0.993, "precision": 0.992, "recall": 0.995, "f1_score": 0.9935}
+{
+  "model_name": "LSTM",
+  "accuracy": 0.7777235628105039,
+  "precision": 0.9720009654839489,
+  "recall": 0.6276007169017377,
+  "f1_score": 0.7627255078365452,
+  "specificity": 0.9761095664710122,
+  "false_positive_rate": 0.023890433528987745,
+  "false_negative_rate": 0.3723992830982623,
+  "roc_auc": 0.960484620509744,
+  "pr_auc": 0.965555150070481,
+  "true_positive": 8054,
+  "true_negative": 9479,
+  "false_positive": 232,
+  "false_negative": 4779,
+  "inference_ms": 8.615999831818044e-06,
+  "training_time_seconds": 110.32,
+  "test_samples": 22544,
+  "dataset": "NSL-KDD official benchmark (KDDTest+)",
+  "training_loss_history": [
+    0.09234394696382808,
+    0.0281029643117518,
+    0.02470926251995963,
+    0.021995871775516256,
+    0.02126393920389967,
+    0.0194754143270783
+  ]
+}
